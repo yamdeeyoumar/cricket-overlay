@@ -5,73 +5,93 @@
   <title>Cricket Overlay</title>
   <style>
     :root {
-      --bg: rgba(0, 0, 0, 0.0);
-      --panel: rgba(10,10,10,0.7);
-      --accent: #E0B12E; /* golden accent */
-      --text: #FFFFFF;
+      --bg: rgba(0,0,0,0.0);
+      --panel: linear-gradient(90deg, #002244, #004488);
+      --accent: #FFD700;
+      --text: #ffffff;
       --muted: rgba(255,255,255,0.8);
+      --shadow: 0 4px 16px rgba(0,0,0,0.6);
       --radius: 10px;
-      --shadow: 0 4px 16px rgba(0,0,0,0.5);
     }
     body {
-      margin: 0;
-      background: var(--bg);
+      margin:0;
+      background:var(--bg);
       font-family: "Segoe UI", sans-serif;
       color: var(--text);
     }
-    .container {
-      max-width: 100%;
-      padding: 12px;
+    .overlay-wrapper {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 1400px;
     }
     .scorebar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--panel);
-      padding: 12px 20px;
-      border-radius: var(--radius);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:14px 20px;
+      border-radius: var(--radius) var(--radius) 0 0;
       box-shadow: var(--shadow);
-      font-size: 22px;
-      font-weight: 700;
+      background: var(--panel);
+      border: 3px solid var(--accent);
+      border-bottom: none;
     }
-    .team {
-      flex: 1;
-      text-align: center;
+    .team-box {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex:1;
+    }
+    .team-logo {
+      width:50px;
+      height:50px;
+      object-fit:contain;
+      border-radius:50%;
+      border:2px solid var(--accent);
+      background:#fff;
+    }
+    .team-name {
+      font-size:22px;
+      font-weight:700;
+      text-transform: uppercase;
     }
     .score {
-      flex: 1;
-      text-align: center;
-      font-size: 32px;
-      font-weight: 800;
+      flex:1;
+      text-align:center;
+      font-size:36px;
+      font-weight:900;
+      color: var(--accent);
     }
     .overs {
-      font-size: 16px;
+      font-size:16px;
       color: var(--muted);
-      margin-left: 6px;
+      margin-left:6px;
     }
     .players {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 10px;
-      background: var(--panel);
-      padding: 10px 20px;
-      border-radius: var(--radius);
+      display:flex;
+      justify-content:space-around;
+      background:#111;
+      padding:12px 20px;
+      border-radius: 0 0 var(--radius) var(--radius);
+      border: 3px solid var(--accent);
+      border-top:none;
       box-shadow: var(--shadow);
-      font-size: 18px;
     }
     .player-box {
-      flex: 1;
-      text-align: center;
+      text-align:center;
+      flex:1;
     }
     .label {
-      font-size: 14px;
+      font-size:14px;
       color: var(--muted);
       text-transform: uppercase;
     }
     .value {
-      margin-top: 4px;
-      font-size: 20px;
-      font-weight: 700;
+      font-size:20px;
+      font-weight:700;
+      margin-top:2px;
     }
     .value span {
       color: var(--accent);
@@ -79,13 +99,26 @@
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="overlay-wrapper">
+    <!-- Scoreboard -->
     <div class="scorebar">
-      <div class="team" id="battingTeam">Team A</div>
+      <!-- Dragons -->
+      <div class="team-box">
+        <img class="team-logo" src="dragons.png" alt="Dragons Logo">
+        <div class="team-name">Dragons</div>
+      </div>
+
+      <!-- Score -->
       <div class="score" id="score">0/0 <span class="overs">(0.0 ov)</span></div>
-      <div class="team" id="bowlingTeam">Team B</div>
+
+      <!-- QCF -->
+      <div class="team-box" style="justify-content:flex-end;">
+        <div class="team-name">QCF</div>
+        <img class="team-logo" src="qcf.png" alt="QCF Logo">
+      </div>
     </div>
 
+    <!-- Players Panel -->
     <div class="players">
       <div class="player-box">
         <div class="label">Striker</div>
@@ -114,21 +147,15 @@
         const res = await fetch(`${api}/api/score?clubId=${clubId}&matchId=${matchId}&t=${Date.now()}`);
         const data = await res.json();
 
-        // Teams + score
-        document.getElementById("battingTeam").textContent = data.battingTeam?.name || "Team A";
-        document.getElementById("bowlingTeam").textContent = data.bowlingTeam?.name || "Team B";
         if (data.score) {
           document.getElementById("score").innerHTML =
             `${data.score.runs}/${data.score.wickets} <span class="overs">(${data.score.overs} ov)</span>`;
         }
 
-        // Striker / Non-striker
         document.getElementById("striker").innerHTML =
           data.striker ? `${data.striker.name} <span>${data.striker.runs}(${data.striker.balls})</span>` : "--";
         document.getElementById("nonStriker").innerHTML =
           data.nonStriker ? `${data.nonStriker.name} <span>${data.nonStriker.runs}(${data.nonStriker.balls})</span>` : "--";
-
-        // Bowler
         document.getElementById("bowler").innerHTML =
           data.bowler ? `${data.bowler.name} <span>${data.bowler.wickets}-${data.bowler.runs} (${data.bowler.overs})</span>` : "--";
 
