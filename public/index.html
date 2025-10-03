@@ -5,21 +5,48 @@
   <title>Cricket Overlay</title>
   <style>
     :root {
-      --bg: rgba(0,0,0,0.0);
+      --bg: rgba(0,0,0,0.0);      /* transparent for OBS */
       --panel: rgba(0,0,0,0.6);
       --accent: #00d084;
       --text: #ffffff;
       --muted: rgba(255,255,255,0.8);
       --radius: 14px;
     }
-    body { margin:0; background:var(--bg); font-family:sans-serif; color:var(--text);}
-    .scorebar {
-      display:flex; justify-content:space-between; align-items:center;
-      background:var(--panel); padding:10px 16px; border-radius:var(--radius);
+    body {
+      margin:0;
+      background:var(--bg);
+      font-family: sans-serif;
+      color: var(--text);
     }
-    .team { font-weight:700; }
-    .score { font-size:28px; font-weight:800; }
-    .overs { font-size:14px; color:var(--muted); }
+    .scorebar {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      background:var(--panel);
+      padding:10px 16px;
+      border-radius:var(--radius);
+      font-size:20px;
+      font-weight:700;
+    }
+    .score {
+      font-size:28px;
+      font-weight:800;
+    }
+    .overs {
+      font-size:14px;
+      color:var(--muted);
+    }
+    .players {
+      margin-top:12px;
+      background:var(--panel);
+      padding:10px 16px;
+      border-radius:var(--radius);
+      font-size:16px;
+      line-height:1.5;
+    }
+    .players strong {
+      color: var(--accent);
+    }
   </style>
 </head>
 <body>
@@ -27,6 +54,12 @@
     <div class="team" id="battingTeam">Team A</div>
     <div class="score" id="score">0/0 <span class="overs">(0.0 ov)</span></div>
     <div class="team" id="bowlingTeam">Team B</div>
+  </div>
+
+  <div class="players">
+    <div><strong>Striker:</strong> <span id="striker">--</span></div>
+    <div><strong>Non-Striker:</strong> <span id="nonStriker">--</span></div>
+    <div><strong>Bowler:</strong> <span id="bowler">--</span></div>
   </div>
 
   <script>
@@ -40,18 +73,32 @@
       try {
         const r = await fetch(`${api}/api/score?clubId=${clubId}&matchId=${matchId}&t=${Date.now()}`);
         const data = await r.json();
+
+        // Teams + score
         document.getElementById("battingTeam").textContent = data.battingTeam?.name || "Team A";
         document.getElementById("bowlingTeam").textContent = data.bowlingTeam?.name || "Team B";
         if (data.score) {
           document.getElementById("score").innerHTML =
             `${data.score.runs}/${data.score.wickets} <span class="overs">(${data.score.overs} ov)</span>`;
         }
+
+        // Batsmen
+        document.getElementById("striker").textContent =
+          data.striker ? `${data.striker.name} ${data.striker.runs}(${data.striker.balls})` : "--";
+        document.getElementById("nonStriker").textContent =
+          data.nonStriker ? `${data.nonStriker.name} ${data.nonStriker.runs}(${data.nonStriker.balls})` : "--";
+
+        // Bowler
+        document.getElementById("bowler").textContent =
+          data.bowler ? `${data.bowler.name} ${data.bowler.wickets}-${data.bowler.runs} (${data.bowler.overs})` : "--";
+
       } catch (e) {
         document.getElementById("score").textContent = "Error loading score";
       } finally {
         setTimeout(update, refreshMs);
       }
     }
+
     update();
   </script>
 </body>
