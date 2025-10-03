@@ -1,21 +1,23 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <title>Cricket Overlay</title>
   <style>
     :root {
-      --bg: rgba(0,0,0,0.0);
+      --bg: rgba(0, 0, 0, 0.0);
       --panel: linear-gradient(90deg, #002244, #004488);
       --accent: #FFD700;
       --text: #ffffff;
-      --muted: rgba(255,255,255,0.8);
-      --shadow: 0 4px 16px rgba(0,0,0,0.6);
+      --muted: rgba(255, 255, 255, 0.8);
+      --shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
       --radius: 10px;
     }
+
     body {
-      margin:0;
-      background:var(--bg);
+      margin: 0;
+      background: var(--bg);
       font-family: "Segoe UI", sans-serif;
       color: var(--text);
     }
@@ -29,7 +31,6 @@
       height: 60px;
       object-fit: contain;
       border-radius: 50%;
-      border: 2px solid var(--accent);
       background: transparent;
       z-index: 9999;
     }
@@ -42,82 +43,94 @@
       width: 90%;
       max-width: 1400px;
     }
+
     .scorebar {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      padding:14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 20px;
       border-radius: var(--radius) var(--radius) 0 0;
       box-shadow: var(--shadow);
       background: var(--panel);
       border: 3px solid var(--accent);
       border-bottom: none;
     }
+
     .team-box {
-      display:flex;
-      align-items:center;
-      gap:10px;
-      flex:1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
     }
+
     .team-logo {
-      width:50px;
-      height:50px;
-      object-fit:contain;
-      border-radius:50%;
-      border:2px solid var(--accent);
-      background:transparent;
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+      border-radius: 50%;
+      background: transparent;
     }
+
     .team-name {
-      font-size:22px;
-      font-weight:700;
+      font-size: 22px;
+      font-weight: 700;
       text-transform: uppercase;
     }
+
     .team-icon {
-      width:20px;
-      height:20px;
-      object-fit:contain;
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
     }
+
     .score {
-      flex:1;
-      text-align:center;
-      font-size:36px;
-      font-weight:900;
+      flex: 1;
+      text-align: center;
+      font-size: 36px;
+      font-weight: 900;
       color: var(--accent);
     }
+
     .overs {
-      font-size:16px;
+      font-size: 16px;
       color: var(--muted);
-      margin-left:6px;
+      margin-left: 6px;
     }
+
     .players {
-      display:flex;
-      justify-content:space-around;
-      background:#111;
-      padding:12px 20px;
+      display: flex;
+      justify-content: space-around;
+      background: #111;
+      padding: 12px 20px;
       border-radius: 0 0 var(--radius) var(--radius);
       border: 3px solid var(--accent);
-      border-top:none;
+      border-top: none;
       box-shadow: var(--shadow);
     }
+
     .player-box {
-      text-align:center;
-      flex:1;
+      text-align: center;
+      flex: 1;
     }
+
     .label {
-      font-size:14px;
+      font-size: 14px;
       color: var(--muted);
       text-transform: uppercase;
     }
+
     .value {
-      font-size:20px;
-      font-weight:700;
-      margin-top:2px;
+      font-size: 20px;
+      font-weight: 700;
+      margin-top: 2px;
     }
+
     .value span {
       color: var(--accent);
     }
   </style>
 </head>
+
 <body>
   <!-- QCF watermark -->
   <img class="qcf-badge" src="qcf.png" alt="QCF Logo">
@@ -207,4 +220,5 @@
     update();
   </script>
 </body>
+
 </html>
