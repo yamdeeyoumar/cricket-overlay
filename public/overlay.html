@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Cricket Overlay</title>
+  <style>
+    :root {
+      --bg: rgba(0,0,0,0.0);
+      --panel: rgba(0,0,0,0.6);
+      --accent: #00d084;
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.8);
+      --radius: 14px;
+    }
+    body { margin:0; background:var(--bg); font-family:sans-serif; color:var(--text);}
+    .scorebar {
+      display:flex; justify-content:space-between; align-items:center;
+      background:var(--panel); padding:10px 16px; border-radius:var(--radius);
+    }
+    .team { font-weight:700; }
+    .score { font-size:28px; font-weight:800; }
+    .overs { font-size:14px; color:var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="scorebar">
+    <div class="team" id="battingTeam">Team A</div>
+    <div class="score" id="score">0/0 <span class="overs">(0.0 ov)</span></div>
+    <div class="team" id="bowlingTeam">Team B</div>
+  </div>
+
+  <script>
+    const qs = new URLSearchParams(location.search);
+    const api = qs.get("api") || "";
+    const clubId = qs.get("clubId");
+    const matchId = qs.get("matchId");
+    const refreshMs = parseInt(qs.get("refreshMs") || "4000", 10);
+
+    async function update() {
+      try {
+        const r = await fetch(`${api}/api/score?clubId=${clubId}&matchId=${matchId}&t=${Date.now()}`);
+        const data = await r.json();
+        document.getElementById("battingTeam").textContent = data.battingTeam?.name || "Team A";
+        document.getElementById("bowlingTeam").textContent = data.bowlingTeam?.name || "Team B";
+        if (data.score) {
+          document.getElementById("score").innerHTML =
+            `${data.score.runs}/${data.score.wickets} <span class="overs">(${data.score.overs} ov)</span>`;
+        }
+      } catch (e) {
+        document.getElementById("score").textContent = "Error loading score";
+      } finally {
+        setTimeout(update, refreshMs);
+      }
+    }
+    update();
+  </script>
+</body>
+</html>
