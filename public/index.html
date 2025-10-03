@@ -6,16 +6,17 @@
   <style>
     :root {
       --bg: rgba(0,0,0,0.0);      /* transparent for OBS */
-      --panel: rgba(0,0,0,0.6);
-      --accent: #00d084;
+      --panel: rgba(0,0,0,0.7);
+      --accent: #FFD700;          /* gold accent */
       --text: #ffffff;
       --muted: rgba(255,255,255,0.8);
-      --radius: 14px;
+      --radius: 12px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.4);
     }
     body {
       margin:0;
       background:var(--bg);
-      font-family: sans-serif;
+      font-family: "Segoe UI", sans-serif;
       color: var(--text);
     }
     .scorebar {
@@ -23,43 +24,72 @@
       justify-content:space-between;
       align-items:center;
       background:var(--panel);
-      padding:10px 16px;
+      padding:12px 20px;
       border-radius:var(--radius);
+      box-shadow: var(--shadow);
       font-size:20px;
       font-weight:700;
     }
     .score {
-      font-size:28px;
+      font-size:34px;
       font-weight:800;
     }
     .overs {
-      font-size:14px;
+      font-size:16px;
       color:var(--muted);
+      margin-left:6px;
     }
     .players {
+      display:flex;
+      justify-content:space-between;
       margin-top:12px;
       background:var(--panel);
-      padding:10px 16px;
+      padding:10px 20px;
       border-radius:var(--radius);
+      box-shadow: var(--shadow);
       font-size:16px;
-      line-height:1.5;
     }
-    .players strong {
+    .player-box {
+      flex:1;
+      padding:0 10px;
+    }
+    .label {
+      font-size:13px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .value {
+      font-size:18px;
+      font-weight:700;
+      margin-top:2px;
+    }
+    .value span {
       color: var(--accent);
     }
   </style>
 </head>
 <body>
+  <!-- Scoreboard -->
   <div class="scorebar">
     <div class="team" id="battingTeam">Team A</div>
     <div class="score" id="score">0/0 <span class="overs">(0.0 ov)</span></div>
     <div class="team" id="bowlingTeam">Team B</div>
   </div>
 
+  <!-- Players / Bowler panel -->
   <div class="players">
-    <div><strong>Striker:</strong> <span id="striker">--</span></div>
-    <div><strong>Non-Striker:</strong> <span id="nonStriker">--</span></div>
-    <div><strong>Bowler:</strong> <span id="bowler">--</span></div>
+    <div class="player-box">
+      <div class="label">Striker</div>
+      <div class="value" id="striker">--</div>
+    </div>
+    <div class="player-box">
+      <div class="label">Non-Striker</div>
+      <div class="value" id="nonStriker">--</div>
+    </div>
+    <div class="player-box">
+      <div class="label">Bowler</div>
+      <div class="value" id="bowler">--</div>
+    </div>
   </div>
 
   <script>
@@ -83,14 +113,14 @@
         }
 
         // Batsmen
-        document.getElementById("striker").textContent =
-          data.striker ? `${data.striker.name} ${data.striker.runs}(${data.striker.balls})` : "--";
-        document.getElementById("nonStriker").textContent =
-          data.nonStriker ? `${data.nonStriker.name} ${data.nonStriker.runs}(${data.nonStriker.balls})` : "--";
+        document.getElementById("striker").innerHTML =
+          data.striker ? `${data.striker.name} <span>${data.striker.runs}(${data.striker.balls})</span>` : "--";
+        document.getElementById("nonStriker").innerHTML =
+          data.nonStriker ? `${data.nonStriker.name} <span>${data.nonStriker.runs}(${data.nonStriker.balls})</span>` : "--";
 
         // Bowler
-        document.getElementById("bowler").textContent =
-          data.bowler ? `${data.bowler.name} ${data.bowler.wickets}-${data.bowler.runs} (${data.bowler.overs})` : "--";
+        document.getElementById("bowler").innerHTML =
+          data.bowler ? `${data.bowler.name} <span>${data.bowler.wickets}-${data.bowler.runs} (${data.bowler.overs})</span>` : "--";
 
       } catch (e) {
         document.getElementById("score").textContent = "Error loading score";
