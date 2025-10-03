@@ -5,63 +5,73 @@
   <title>Cricket Overlay</title>
   <style>
     :root {
-      --bg: rgba(0,0,0,0.0);      /* transparent for OBS */
-      --panel: rgba(0,0,0,0.7);
-      --accent: #FFD700;          /* gold accent */
-      --text: #ffffff;
+      --bg: rgba(0, 0, 0, 0.0);
+      --panel: rgba(10,10,10,0.7);
+      --accent: #E0B12E; /* golden accent */
+      --text: #FFFFFF;
       --muted: rgba(255,255,255,0.8);
-      --radius: 12px;
-      --shadow: 0 4px 12px rgba(0,0,0,0.4);
+      --radius: 10px;
+      --shadow: 0 4px 16px rgba(0,0,0,0.5);
     }
     body {
-      margin:0;
-      background:var(--bg);
+      margin: 0;
+      background: var(--bg);
       font-family: "Segoe UI", sans-serif;
       color: var(--text);
     }
+    .container {
+      max-width: 100%;
+      padding: 12px;
+    }
     .scorebar {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      background:var(--panel);
-      padding:12px 20px;
-      border-radius:var(--radius);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--panel);
+      padding: 12px 20px;
+      border-radius: var(--radius);
       box-shadow: var(--shadow);
-      font-size:20px;
-      font-weight:700;
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .team {
+      flex: 1;
+      text-align: center;
     }
     .score {
-      font-size:34px;
-      font-weight:800;
+      flex: 1;
+      text-align: center;
+      font-size: 32px;
+      font-weight: 800;
     }
     .overs {
-      font-size:16px;
-      color:var(--muted);
-      margin-left:6px;
+      font-size: 16px;
+      color: var(--muted);
+      margin-left: 6px;
     }
     .players {
-      display:flex;
-      justify-content:space-between;
-      margin-top:12px;
-      background:var(--panel);
-      padding:10px 20px;
-      border-radius:var(--radius);
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      background: var(--panel);
+      padding: 10px 20px;
+      border-radius: var(--radius);
       box-shadow: var(--shadow);
-      font-size:16px;
+      font-size: 18px;
     }
     .player-box {
-      flex:1;
-      padding:0 10px;
+      flex: 1;
+      text-align: center;
     }
     .label {
-      font-size:13px;
+      font-size: 14px;
       color: var(--muted);
       text-transform: uppercase;
     }
     .value {
-      font-size:18px;
-      font-weight:700;
-      margin-top:2px;
+      margin-top: 4px;
+      font-size: 20px;
+      font-weight: 700;
     }
     .value span {
       color: var(--accent);
@@ -69,26 +79,26 @@
   </style>
 </head>
 <body>
-  <!-- Scoreboard -->
-  <div class="scorebar">
-    <div class="team" id="battingTeam">Team A</div>
-    <div class="score" id="score">0/0 <span class="overs">(0.0 ov)</span></div>
-    <div class="team" id="bowlingTeam">Team B</div>
-  </div>
+  <div class="container">
+    <div class="scorebar">
+      <div class="team" id="battingTeam">Team A</div>
+      <div class="score" id="score">0/0 <span class="overs">(0.0 ov)</span></div>
+      <div class="team" id="bowlingTeam">Team B</div>
+    </div>
 
-  <!-- Players / Bowler panel -->
-  <div class="players">
-    <div class="player-box">
-      <div class="label">Striker</div>
-      <div class="value" id="striker">--</div>
-    </div>
-    <div class="player-box">
-      <div class="label">Non-Striker</div>
-      <div class="value" id="nonStriker">--</div>
-    </div>
-    <div class="player-box">
-      <div class="label">Bowler</div>
-      <div class="value" id="bowler">--</div>
+    <div class="players">
+      <div class="player-box">
+        <div class="label">Striker</div>
+        <div class="value" id="striker">--</div>
+      </div>
+      <div class="player-box">
+        <div class="label">Non-Striker</div>
+        <div class="value" id="nonStriker">--</div>
+      </div>
+      <div class="player-box">
+        <div class="label">Bowler</div>
+        <div class="value" id="bowler">--</div>
+      </div>
     </div>
   </div>
 
@@ -101,8 +111,8 @@
 
     async function update() {
       try {
-        const r = await fetch(`${api}/api/score?clubId=${clubId}&matchId=${matchId}&t=${Date.now()}`);
-        const data = await r.json();
+        const res = await fetch(`${api}/api/score?clubId=${clubId}&matchId=${matchId}&t=${Date.now()}`);
+        const data = await res.json();
 
         // Teams + score
         document.getElementById("battingTeam").textContent = data.battingTeam?.name || "Team A";
@@ -112,7 +122,7 @@
             `${data.score.runs}/${data.score.wickets} <span class="overs">(${data.score.overs} ov)</span>`;
         }
 
-        // Batsmen
+        // Striker / Non-striker
         document.getElementById("striker").innerHTML =
           data.striker ? `${data.striker.name} <span>${data.striker.runs}(${data.striker.balls})</span>` : "--";
         document.getElementById("nonStriker").innerHTML =
@@ -123,7 +133,7 @@
           data.bowler ? `${data.bowler.name} <span>${data.bowler.wickets}-${data.bowler.runs} (${data.bowler.overs})</span>` : "--";
 
       } catch (e) {
-        document.getElementById("score").textContent = "Error loading score";
+        console.error("Overlay fetch error:", e);
       } finally {
         setTimeout(update, refreshMs);
       }
