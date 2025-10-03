@@ -19,6 +19,21 @@
       font-family: "Segoe UI", sans-serif;
       color: var(--text);
     }
+
+    /* QCF logo fixed top-left */
+    .qcf-badge {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      background: transparent;
+      z-index: 9999;
+    }
+
     .overlay-wrapper {
       position: fixed;
       bottom: 20px;
@@ -56,6 +71,11 @@
       font-size:22px;
       font-weight:700;
       text-transform: uppercase;
+    }
+    .team-icon {
+      width:20px;
+      height:20px;
+      object-fit:contain;
     }
     .score {
       flex:1;
@@ -99,22 +119,27 @@
   </style>
 </head>
 <body>
+  <!-- QCF watermark -->
+  <img class="qcf-badge" src="qcf.png" alt="QCF Logo">
+
   <div class="overlay-wrapper">
     <!-- Scoreboard -->
     <div class="scorebar">
-      <!-- Batting team -->
-      <div class="team-box" id="battingBox">
-        <img class="team-logo" id="battingLogo" src="" alt="Batting Logo">
-        <div class="team-name" id="battingTeam">Batting</div>
+      <!-- Dragons left -->
+      <div class="team-box">
+        <img class="team-logo" src="dragons.png" alt="Dragons Logo">
+        <div class="team-name" id="dragonsName">Dragons</div>
+        <img id="dragonsIcon" class="team-icon" src="" alt="">
       </div>
 
       <!-- Score -->
       <div class="score" id="score">0/0 <span class="overs">(0.0 ov)</span></div>
 
-      <!-- Bowling team -->
-      <div class="team-box" style="justify-content:flex-end;" id="bowlingBox">
-        <div class="team-name" id="bowlingTeam">Bowling</div>
-        <img class="team-logo" id="bowlingLogo" src="" alt="Bowling Logo">
+      <!-- Enemy right -->
+      <div class="team-box" style="justify-content:flex-end;">
+        <img id="enemyIcon" class="team-icon" src="" alt="">
+        <div class="team-name" id="enemyName">Enemy</div>
+        <img class="team-logo" src="enemy.png" alt="Enemy Logo">
       </div>
     </div>
 
@@ -147,20 +172,16 @@
         const res = await fetch(`${api}/api/score?clubId=${clubId}&matchId=${matchId}&t=${Date.now()}`);
         const data = await res.json();
 
-        // Detect which side is Dragons
-        const battingIsDragons = (data.battingTeam?.name || "").toLowerCase().includes("dragon");
+        // Detect if Dragons are batting
+        const dragonsBatting = (data.battingTeam?.name || "").toLowerCase().includes("dragon");
 
-        // Batting team
-        const battingName = battingIsDragons ? "Dragons" : "Enemy";
-        const battingLogo = battingIsDragons ? "dragons.png" : "enemy.png";
-        document.getElementById("battingTeam").textContent = battingName;
-        document.getElementById("battingLogo").src = battingLogo;
+        // Show icons beside names
+        document.getElementById("dragonsIcon").src = dragonsBatting ? "bat.png" : "ball.png";
+        document.getElementById("enemyIcon").src = dragonsBatting ? "ball.png" : "bat.png";
 
-        // Bowling team
-        const bowlingName = battingIsDragons ? "Enemy" : "Dragons";
-        const bowlingLogo = battingIsDragons ? "enemy.png" : "dragons.png";
-        document.getElementById("bowlingTeam").textContent = bowlingName;
-        document.getElementById("bowlingLogo").src = bowlingLogo;
+        // Update names (in case API has official names)
+        document.getElementById("dragonsName").textContent = "Dragons";
+        document.getElementById("enemyName").textContent = "Enemy";
 
         // Score
         if (data.score) {
