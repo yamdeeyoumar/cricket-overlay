@@ -50,7 +50,7 @@
       object-fit:contain;
       border-radius:50%;
       border:2px solid var(--accent);
-      background:#fff;
+      background:transparent;
     }
     .team-name {
       font-size:22px;
@@ -102,19 +102,19 @@
   <div class="overlay-wrapper">
     <!-- Scoreboard -->
     <div class="scorebar">
-      <!-- Dragons -->
-      <div class="team-box">
-        <img class="team-logo" src="dragons.png" alt="Dragons Logo">
-        <div class="team-name">Dragons</div>
+      <!-- Batting team -->
+      <div class="team-box" id="battingBox">
+        <img class="team-logo" id="battingLogo" src="" alt="Batting Logo">
+        <div class="team-name" id="battingTeam">Batting</div>
       </div>
 
       <!-- Score -->
       <div class="score" id="score">0/0 <span class="overs">(0.0 ov)</span></div>
 
-      <!-- QCF -->
-      <div class="team-box" style="justify-content:flex-end;">
-        <div class="team-name">QCF</div>
-        <img class="team-logo" src="qcf.png" alt="QCF Logo">
+      <!-- Bowling team -->
+      <div class="team-box" style="justify-content:flex-end;" id="bowlingBox">
+        <div class="team-name" id="bowlingTeam">Bowling</div>
+        <img class="team-logo" id="bowlingLogo" src="" alt="Bowling Logo">
       </div>
     </div>
 
@@ -147,11 +147,28 @@
         const res = await fetch(`${api}/api/score?clubId=${clubId}&matchId=${matchId}&t=${Date.now()}`);
         const data = await res.json();
 
+        // Detect which side is Dragons
+        const battingIsDragons = (data.battingTeam?.name || "").toLowerCase().includes("dragon");
+
+        // Batting team
+        const battingName = battingIsDragons ? "Dragons" : "Enemy";
+        const battingLogo = battingIsDragons ? "dragons.png" : "enemy.png";
+        document.getElementById("battingTeam").textContent = battingName;
+        document.getElementById("battingLogo").src = battingLogo;
+
+        // Bowling team
+        const bowlingName = battingIsDragons ? "Enemy" : "Dragons";
+        const bowlingLogo = battingIsDragons ? "enemy.png" : "dragons.png";
+        document.getElementById("bowlingTeam").textContent = bowlingName;
+        document.getElementById("bowlingLogo").src = bowlingLogo;
+
+        // Score
         if (data.score) {
           document.getElementById("score").innerHTML =
             `${data.score.runs}/${data.score.wickets} <span class="overs">(${data.score.overs} ov)</span>`;
         }
 
+        // Players
         document.getElementById("striker").innerHTML =
           data.striker ? `${data.striker.name} <span>${data.striker.runs}(${data.striker.balls})</span>` : "--";
         document.getElementById("nonStriker").innerHTML =
