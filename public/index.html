@@ -165,10 +165,21 @@
         if (debug) debugBox.innerText = JSON.stringify(data, null, 2);
         if (data.error) throw new Error(data.error);
 
-        document.getElementById("score-text").innerText = data.score || "--/--";
-        document.getElementById("overs-text").innerText = `${data.overs || "--"} overs`;
+        const parseRuns = (scoreString) => {
+          if (!scoreString) return 0;
+          const runsMatch = scoreString.toString().match(/\d+/);
+          return runsMatch ? parseInt(runsMatch[0], 10) : 0;
+        };
 
-        document.getElementById("left-name").innerText = "Dragons";
+        const innings1 = data.innings1 || {};
+        const innings2 = data.innings2 || {};
+        const hasInnings2Score = parseRuns(innings2.score) > 0;
+        const currentInnings = hasInnings2Score ? innings2 : innings1;
+
+        document.getElementById("score-text").innerText = currentInnings.score || "--/--";
+        document.getElementById("overs-text").innerText = `${currentInnings.overs || "--"} overs`;
+
+        document.getElementById("left-name").innerText = data.battingTeam || "Dragons";
         document.getElementById("right-name").innerText = data.bowlingTeam || "Opponent";
 
         const leftIcon = document.getElementById("left-icon");
@@ -188,7 +199,8 @@
         }
 
         const targetDiv = document.getElementById("target-text");
-        if (data.target && parseInt(data.target) > 0 && data.battingTeam !== "Dragons") {
+        const chaseActive = Boolean(innings1.score && currentInnings === innings2);
+        if (chaseActive && data.target && parseInt(data.target, 10) > 0) {
           targetDiv.innerText = `Target: ${data.target}`;
         } else {
           targetDiv.innerText = "";
@@ -196,18 +208,19 @@
 
         const battersDiv = document.getElementById("batters-text");
         const bowlerDiv = document.getElementById("bowler-text");
+        const { striker, nonStriker, bowler } = currentInnings;
 
-        if (data.striker && data.nonStriker) {
+        if (striker && nonStriker) {
           battersDiv.innerHTML = `
-            <span class="highlight">${data.striker.name}</span> ${data.striker.runs || '-'} (${data.striker.balls || '-'}) ⚡
-            <span>${data.nonStriker.name}</span> ${data.nonStriker.runs || '-'} (${data.nonStriker.balls || '-'})
+            <span class="highlight">${striker.name}</span> ${striker.runs || '-'} (${striker.balls || '-'}) ⚡
+            <span>${nonStriker.name}</span> ${nonStriker.runs || '-'} (${nonStriker.balls || '-'})
           `;
         } else {
           battersDiv.innerText = "";
         }
 
-        if (data.bowler) {
-          bowlerDiv.innerHTML = `Bowler: <span class="highlight">${data.bowler.name}</span> ${data.bowler.overs || '-'}-${data.bowler.runs || '-'}-${data.bowler.wickets || '-'}`;
+        if (bowler) {
+          bowlerDiv.innerHTML = `Bowler: <span class="highlight">${bowler.name}</span> ${bowler.overs || '-'}-${bowler.runs || '-'}-${bowler.wickets || '-'}`;
         } else {
           bowlerDiv.innerText = "";
         }
