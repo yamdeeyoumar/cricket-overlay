@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,6 +12,7 @@
       background: transparent;
       font-family: "Poppins", sans-serif;
     }
+
     .overlay {
       position: absolute;
       bottom: 5%;
@@ -28,33 +30,93 @@
       box-shadow: 0 0 25px rgba(0, 0, 0, .5);
       backdrop-filter: blur(8px);
     }
-    .team { display: flex; align-items: center; gap: 10px; }
+
+    .team {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
     .team img {
-      height: 55px; width: 55px; object-fit: contain;
-      border: none; filter: drop-shadow(0 0 4px rgba(0,0,0,.6));
+      height: 55px;
+      width: 55px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 4px rgba(0, 0, 0, .6));
     }
-    .score { text-align: center; font-size: 2em; font-weight: 700; color: gold; }
-    .overs { font-size: .95em; color: #ccc; }
-    .target { font-size: 1em; color: #FFD700; font-weight: bold; animation: pulse 1.5s infinite alternate; }
-    @keyframes pulse { from { text-shadow: 0 0 5px gold; } to { text-shadow: 0 0 15px gold; } }
+
+    .score {
+      text-align: center;
+      font-size: 2em;
+      font-weight: 700;
+      color: gold;
+    }
+
+    .overs {
+      font-size: .95em;
+      color: #ccc;
+    }
+
+    .target {
+      font-size: 1em;
+      color: #FFD700;
+      font-weight: bold;
+      animation: pulse 1.5s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { text-shadow: 0 0 5px gold; }
+      to { text-shadow: 0 0 15px gold; }
+    }
+
     .players {
-      position: absolute; bottom: -60px; left: 50%; transform: translateX(-50%);
-      color: white; font-size: 1.1em; text-shadow: 0 0 5px black;
-      display: flex; flex-direction: column; align-items: center; text-align: center;
+      position: absolute;
+      bottom: -60px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      font-size: 1.1em;
+      text-shadow: 0 0 5px black;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
     }
+
     .qcf-logo {
-      position: absolute; top: 15px; left: 15px;
-      height: 60px; width: 60px; opacity: .9; object-fit: contain; filter: drop-shadow(0 0 5px black);
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      height: 60px;
+      width: 60px;
+      opacity: .9;
+      object-fit: contain;
+      filter: drop-shadow(0 0 5px black);
     }
-    .highlight { color: gold; font-weight: bold; }
+
+    .highlight {
+      color: gold;
+      font-weight: bold;
+    }
+
     #debug-box {
-      position: fixed; bottom: 10px; right: 10px;
-      background: rgba(0,0,0,.75); color: lime; font-family: monospace; font-size: 12px;
-      padding: 10px; border-radius: 8px; width: 320px; height: 200px;
-      overflow-y: auto; display: none; z-index: 9999;
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, .75);
+      color: lime;
+      font-family: monospace;
+      font-size: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      width: 320px;
+      height: 200px;
+      overflow-y: auto;
+      display: none;
+      z-index: 9999;
     }
   </style>
 </head>
+
 <body>
   <img src="qcf.png" alt="QCF Logo" class="qcf-logo" />
 
@@ -91,6 +153,7 @@
     const clubId = query.get("clubId");
     const api = query.get("api") || window.location.origin;
     const debug = query.get("debug") === "1";
+
     const debugBox = document.getElementById("debug-box");
     if (debug) debugBox.style.display = "block";
 
@@ -98,13 +161,12 @@
       try {
         const res = await fetch(`${api}/api/live?clubId=${clubId}&matchId=${matchId}&t=${Date.now()}`);
         const data = await res.json();
+
         if (debug) debugBox.innerText = JSON.stringify(data, null, 2);
         if (data.error) throw new Error(data.error);
 
-        document.getElementById("score-text").innerText =
-          (data.innings2.score || data.innings1.score) || "--/--";
-        document.getElementById("overs-text").innerText =
-          `${(data.innings2.overs || data.innings1.overs) || "--"} overs`;
+        document.getElementById("score-text").innerText = data.score || "--/--";
+        document.getElementById("overs-text").innerText = `${data.overs || "--"} overs`;
 
         document.getElementById("left-name").innerText = "Dragons";
         document.getElementById("right-name").innerText = data.bowlingTeam || "Opponent";
@@ -114,34 +176,44 @@
         leftIcon.style.display = rightIcon.style.display = "none";
 
         if (data.battingTeam && data.battingTeam.toLowerCase().includes("dragon")) {
-          leftIcon.src = "bat.png"; leftIcon.style.display = "block";
-          rightIcon.src = "ball.png"; rightIcon.style.display = "block";
+          leftIcon.src = "bat.png";
+          leftIcon.style.display = "block";
+          rightIcon.src = "ball.png";
+          rightIcon.style.display = "block";
         } else {
-          leftIcon.src = "ball.png"; leftIcon.style.display = "block";
-          rightIcon.src = "bat.png"; rightIcon.style.display = "block";
+          leftIcon.src = "ball.png";
+          leftIcon.style.display = "block";
+          rightIcon.src = "bat.png";
+          rightIcon.style.display = "block";
         }
 
         const targetDiv = document.getElementById("target-text");
         if (data.target && parseInt(data.target) > 0 && data.battingTeam !== "Dragons") {
           targetDiv.innerText = `Target: ${data.target}`;
-        } else targetDiv.innerText = "";
+        } else {
+          targetDiv.innerText = "";
+        }
 
         const battersDiv = document.getElementById("batters-text");
         const bowlerDiv = document.getElementById("bowler-text");
 
-        if (data.batsmen?.length) {
-          const [a,b] = data.batsmen;
+        if (data.striker && data.nonStriker) {
           battersDiv.innerHTML = `
-            <span class="highlight">${a.name}</span> ${a.runs} (${a.balls}) ⚡
-            ${b ? `<span>${b.name}</span> ${b.runs} (${b.balls})` : ""}
+            <span class="highlight">${data.striker.name}</span> ${data.striker.runs || '-'} (${data.striker.balls || '-'}) ⚡
+            <span>${data.nonStriker.name}</span> ${data.nonStriker.runs || '-'} (${data.nonStriker.balls || '-'})
           `;
-        } else battersDiv.innerText = "";
+        } else {
+          battersDiv.innerText = "";
+        }
 
-        if (data.bowler)
-          bowlerDiv.innerHTML = `Bowler: <span class="highlight">${data.bowler.name}</span> ${data.bowler.overs}-${data.bowler.runs}-${data.bowler.wickets}`;
-        else bowlerDiv.innerText = "";
+        if (data.bowler) {
+          bowlerDiv.innerHTML = `Bowler: <span class="highlight">${data.bowler.name}</span> ${data.bowler.overs || '-'}-${data.bowler.runs || '-'}-${data.bowler.wickets || '-'}`;
+        } else {
+          bowlerDiv.innerText = "";
+        }
 
       } catch (err) {
+        console.log("Overlay error:", err);
         if (debug) debugBox.innerText = "Error: " + err.message;
       }
     }
@@ -150,4 +222,5 @@
     updateOverlay();
   </script>
 </body>
+
 </html>

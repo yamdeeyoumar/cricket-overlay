@@ -11,71 +11,58 @@ export default {
       });
     }
 
-    const target = `https://cricclubs.com/QCF/fullScorecard.do?matchId=${matchId}&clubId=${clubId}`;
+    // ✅ Use ball-by-ball instead of fullScorecard
+    const target = `https://cricclubs.com/QCF/ballbyball.do?matchId=${matchId}&clubId=${clubId}`;
 
     try {
       const res = await fetch(target, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+          "User-Agent": "Mozilla/5.0",
           "Accept": "text/html,application/xhtml+xml",
-          "Referer": "https://cricclubs.com/",
         },
       });
 
       const html = await res.text();
 
-      // --- Extract meta description for quick score summary ---
-      const descMatch =
-        html.match(/<meta[^>]+property="og:description"[^>]+content="([^"]+)"/i) ||
-        html.match(/<meta[^>]+name="description"[^>]+content="([^"]+)"/i) ||
-        html.match(/<title>(.*?)<\/title>/i);
+      // --- Extract top teams and score ---
+      const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
+      let battingTeam = "Team A", bowlingTeam = "Team B";
+      let score = "", overs = "";
 
-      const desc = descMatch ? descMatch[1] : "";
-
-      // Example: Dragons 145/7 (20.0 overs) Enemy 122/9 (20.0 overs)
-      const pattern =
-        /([A-Za-z\s]+)\s(\d+\/\d+)\s*\(?([\d.]+)\s*overs?\)?\s*([A-Za-z\s]+)\s(\d+\/\d+)\s*\(?([\d.]+)\s*overs?\)?/i;
-      const m = desc.match(pattern);
-
-      let team1 = "Team A",
-        team2 = "Team B",
-        innings1 = {},
-        innings2 = {};
-
-      if (m) {
-        team1 = m[1].trim();
-        innings1 = { score: m[2], overs: m[3] };
-        team2 = m[4].trim();
-        innings2 = { score: m[5], overs: m[6] };
+      if (titleMatch) {
+        const t = titleMatch[1].match(/(.+?)\s(\d+\/\d+)\s*\(([\d.]+)\/20 ov/i);
+        if (t) {
+          battingTeam = t[1].trim();
+          score = t[2];
+          overs = t[3];
+        }
       }
 
-      const battingTeam =
-        parseInt((innings2.score || "0").split("/")[0]) > 0 ? team2 : team1;
-      const bowlingTeam = battingTeam === team1 ? team2 : team1;
-      const target =
-        innings1.score ? parseInt(innings1.score.split("/")[0]) + 1 : null;
-
-      // --- Extract batsmen (2 top rows) ---
+      // --- Extract batters table ---
       const batsmen = [];
       const batRegex =
-        /<td[^>]*>\s*([\w\s.'-]+)\s*<\/td>\s*<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>/g;
-      let matchBat;
-      while ((matchBat = batRegex.exec(html)) && batsmen.length < 2) {
+        /<th><a[^>]*?>([^<]+)<\/a><\/th>[\s\S]*?<th[^>]*>(\d+)<\/th>[\s\S]*?<th[^>]*>(\d+)<\/th>[\s\S]*?<th[^>]*>(\d+)<\/th>[\s\S]*?<th[^>]*>(\d+)<\/th>/g;
+
+      let m;
+      while ((m = batRegex.exec(html)) && batsmen.length < 2) {
         batsmen.push({
-          name: matchBat[1].trim(),
-          runs: matchBat[2],
-          balls: matchBat[3],
+          name: m[1].trim(),
+          runs: m[2],
+          balls: m[3],
+          fours: m[4],
+          sixes: m[5],
         });
       }
 
-      // --- Extract bowler (first row) ---
+      // --- Extract current bowler ---
       const bowlRegex =
-        /<td[^>]*>\s*([\w\s.'-]+)\s*<\/td>\s*<td[^>]*>(\d+\.\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>/;
+        /<th><a[^>]*?>([^<]+)<\/a><\/th>[\s\S]*?<th[^>]*>([\d.]+)<\/th>[\s\S]*?<th[^>]*>(\d+)<\/th>[\s\S]*?<th[^>]*>(\d+)<\/th>[\s\S]*?<th[^>]*>(\d+)<\/th>/;
       const b = html.match(bowlRegex);
       const bowler = b
         ? {
             name: b[1].trim(),
             overs: b[2],
+            maidens: b[3],
             runs: b[4],
             wickets: b[5],
           }
@@ -86,16 +73,15 @@ export default {
           ok: true,
           battingTeam,
           bowlingTeam,
-          innings1,
-          innings2,
-          target,
+          score,
+          overs,
           batsmen,
           bowler,
         }),
         { headers: { "content-type": "application/json" } }
       );
-    } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), {
+    } catch (err) {
+      return new Response(JSON.stringify({ error: err.message }), {
         status: 500,
         headers: { "content-type": "application/json" },
       });
