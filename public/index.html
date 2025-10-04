@@ -349,7 +349,10 @@
         const strikerLine = document.getElementById("striker-info");
         const nonStrikerLine = document.getElementById("non-striker-info");
         const bowlerInfo = document.getElementById("bowler-info");
-        const { striker, nonStriker, bowler } = currentInnings;
+
+        const striker = (currentInnings && currentInnings.striker) || data.striker || null;
+        const nonStriker = (currentInnings && currentInnings.nonStriker) || data.nonStriker || null;
+        const bowler = (currentInnings && currentInnings.bowler) || data.bowler || null;
 
         const renderBatter = (element, player, isStriker) => {
           if (player && player.name) {
