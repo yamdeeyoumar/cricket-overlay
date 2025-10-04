@@ -182,7 +182,7 @@
 
     async function update() {
       try {
-        const res = await fetch(`${api}/api/score?clubId=${clubId}&matchId=${matchId}&t=${Date.now()}`);
+        const res = await fetch(`${api}/api/live?clubId=${clubId}&matchId=${matchId}&t=${Date.now()}`);
         const data = await res.json();
 
         // Detect if Dragons are batting
