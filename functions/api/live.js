@@ -17,31 +17,31 @@ export async function onRequest(context) {
     const res = await fetch(target, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        Accept: "text/html,application/xhtml+xml",
-        Referer: "https://cricclubs.com/",
+        "Accept": "text/html,application/xhtml+xml",
+        "Referer": "https://cricclubs.com/",
       },
     });
 
     const html = await res.text();
 
-    // --- Extract team scores from top section ---
+    // --- Extract both teams and scores from scoreboard ---
     const scoreRegex =
-      /<span class="teamName">([\w\s]+)<br><\/span>\s*<span>(\d+\/\d+)<\/span>[\s\S]*?<p[^>]*>([\d.]+).*?ov[\s\S]*?class="teamName">([\w\s]+)<br><\/span>\s*<span>(\d+\/\d+)<\/span>[\s\S]*?<p[^>]*>([\d.]+).*?ov/i;
-    const m = html.match(scoreRegex);
+      /<span class="teamName">([\w\s]+)<br><\/span>\s*<span>([\d\/]+)<\/span>[\s\S]*?<p[^>]*>([\d.]+)[^<]*ov[\s\S]*?class="teamName">([\w\s]+)<br><\/span>\s*<span>([\d\/]+)<\/span>[\s\S]*?<p[^>]*>([\d.]+)[^<]*ov/i;
+    const match = html.match(scoreRegex);
 
     let team1 = "Team A",
       team2 = "Team B",
       innings1 = {},
       innings2 = {};
 
-    if (m) {
-      team1 = m[1].trim();
-      innings1 = { score: m[2], overs: m[3] };
-      team2 = m[4].trim();
-      innings2 = { score: m[5], overs: m[6] };
+    if (match) {
+      team1 = match[1].trim();
+      innings1 = { score: match[2], overs: match[3] };
+      team2 = match[4].trim();
+      innings2 = { score: match[5], overs: match[6] };
     }
 
-    // --- Determine batting/bowling sides ---
+    // --- Determine who’s batting and bowling ---
     const battingTeam =
       parseInt((innings2.score || "0").split("/")[0]) > 0 ? team2 : team1;
     const bowlingTeam = battingTeam === team1 ? team2 : team1;
@@ -50,10 +50,10 @@ export async function onRequest(context) {
         ? parseInt(innings1.score.split("/")[0]) + 1
         : null;
 
-    // --- Extract current batsmen (first 2 rows of batter table) ---
-    const batsmanRegex =
-      /<a[^>]*>([\w\s.']+)<\/a><\/th>\s*<th[^>]*><strong>(\d+)<\/strong><\/th>\s*<th[^>]*>(\d+)<\/th>/g;
+    // --- Extract batter rows ---
     const batsmen = [];
+    const batsmanRegex =
+      /<a[^>]*>([\w\s.'-]+)<\/a><\/th>\s*<th[^>]*><strong>(\d+)<\/strong><\/th>\s*<th[^>]*>(\d+)<\/th>/g;
     let b;
     while ((b = batsmanRegex.exec(html)) && batsmen.length < 2) {
       batsmen.push({
@@ -66,10 +66,11 @@ export async function onRequest(context) {
     const striker = batsmen[0] || null;
     const nonStriker = batsmen[1] || null;
 
-    // --- Extract top bowler ---
+    // --- Extract first bowler row ---
     const bowlRegex =
-      /<a[^>]*>([\w\s.']+)<\/a><\/th>\s*<th[^>]*>([\d.]+)<\/th>\s*<th[^>]*>(\d+)<\/th>\s*<th[^>]*>(\d+)<\/th>\s*<th[^>]*>(\d+)<\/th>/;
+      /<a[^>]*>([\w\s.'-]+)<\/a><\/th>\s*<th[^>]*>([\d.]+)<\/th>\s*<th[^>]*>(\d+)<\/th>\s*<th[^>]*>(\d+)<\/th>\s*<th[^>]*>(\d+)<\/th>/;
     const bowlerMatch = html.match(bowlRegex);
+
     const bowler = bowlerMatch
       ? {
           name: bowlerMatch[1].trim(),
@@ -79,20 +80,22 @@ export async function onRequest(context) {
         }
       : null;
 
-    return new Response(
-      JSON.stringify({
-        ok: true,
-        battingTeam,
-        bowlingTeam,
-        innings1,
-        innings2,
-        target,
-        striker,
-        nonStriker,
-        bowler,
-      }),
-      { headers: { "content-type": "application/json" } }
-    );
+    // --- Return structured JSON ---
+    const payload = {
+      ok: true,
+      battingTeam,
+      bowlingTeam,
+      innings1,
+      innings2,
+      target,
+      striker,
+      nonStriker,
+      bowler,
+    };
+
+    return new Response(JSON.stringify(payload, null, 2), {
+      headers: { "content-type": "application/json" },
+    });
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,
