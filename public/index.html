@@ -13,16 +13,23 @@
       font-family: "Poppins", sans-serif;
     }
 
-    .overlay {
+    .overlay-wrapper {
       position: absolute;
       bottom: 5%;
       left: 50%;
       transform: translateX(-50%);
       width: 90%;
       display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .overlay {
+      width: 100%;
+      display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 15px 30px;
+      padding: 12px 24px;
       border-radius: 20px;
       background: linear-gradient(90deg, #003366, #00224E);
       border: 3px solid gold;
@@ -46,7 +53,7 @@
 
     .score {
       text-align: center;
-      font-size: 2em;
+      font-size: 1.85em;
       font-weight: 700;
       color: gold;
     }
@@ -69,17 +76,19 @@
     }
 
     .players {
-      position: absolute;
-      bottom: -60px;
-      left: 50%;
-      transform: translateX(-50%);
+      width: 100%;
       color: white;
-      font-size: 1.1em;
+      font-size: 1.2em;
       text-shadow: 0 0 5px black;
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
+      margin-top: 18px;
+      background: linear-gradient(90deg, #003366, #00224E);
+      border: 3px solid gold;
+      padding: 18px 26px;
+      border-radius: 20px;
     }
 
     .qcf-logo {
@@ -120,29 +129,31 @@
 <body>
   <img src="qcf.png" alt="QCF Logo" class="qcf-logo" />
 
-  <div class="overlay">
-    <div class="team left">
-      <img id="left-logo" src="dragons.png" alt="Dragons" />
-      <div id="left-name" style="font-weight:600;">Dragons</div>
-      <img id="left-icon" src="" style="height:25px;width:25px;display:none;">
+  <div class="overlay-wrapper">
+    <div class="overlay">
+      <div class="team left">
+        <img id="left-logo" src="dragons.png" alt="Dragons" />
+        <div id="left-name" style="font-weight:600;">Dragons</div>
+        <img id="left-icon" src="" style="height:25px;width:25px;display:none;">
+      </div>
+
+      <div class="score">
+        <div id="score-text">-- / --</div>
+        <div class="overs" id="overs-text">-- overs</div>
+        <div class="target" id="target-text"></div>
+      </div>
+
+      <div class="team right">
+        <img id="right-icon" src="" style="height:25px;width:25px;display:none;">
+        <div id="right-name" style="font-weight:600;">Opponent</div>
+        <img id="right-logo" src="enemy.png" alt="Enemy" />
+      </div>
     </div>
 
-    <div class="score">
-      <div id="score-text">-- / --</div>
-      <div class="overs" id="overs-text">-- overs</div>
-      <div class="target" id="target-text"></div>
+    <div class="players" id="players-info">
+      <div id="batters-text"></div>
+      <div id="bowler-text"></div>
     </div>
-
-    <div class="team right">
-      <img id="right-icon" src="" style="height:25px;width:25px;display:none;">
-      <div id="right-name" style="font-weight:600;">Opponent</div>
-      <img id="right-logo" src="enemy.png" alt="Enemy" />
-    </div>
-  </div>
-
-  <div class="players" id="players-info">
-    <div id="batters-text"></div>
-    <div id="bowler-text"></div>
   </div>
 
   <div id="debug-box"></div>
