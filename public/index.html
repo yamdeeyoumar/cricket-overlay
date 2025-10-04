@@ -184,18 +184,39 @@
 
         const leftIcon = document.getElementById("left-icon");
         const rightIcon = document.getElementById("right-icon");
-        leftIcon.style.display = rightIcon.style.display = "none";
+        const leftLogo = document.getElementById("left-logo");
+        const rightLogo = document.getElementById("right-logo");
 
-        if (data.battingTeam && data.battingTeam.toLowerCase().includes("dragon")) {
-          leftIcon.src = "bat.png";
-          leftIcon.style.display = "block";
-          rightIcon.src = "ball.png";
-          rightIcon.style.display = "block";
-        } else {
-          leftIcon.src = "ball.png";
-          leftIcon.style.display = "block";
-          rightIcon.src = "bat.png";
-          rightIcon.style.display = "block";
+        leftLogo.style.display = "none";
+        rightLogo.style.display = "none";
+
+        leftIcon.src = "bat.png";
+        rightIcon.src = "ball.png";
+        leftIcon.style.display = "block";
+        rightIcon.style.display = "block";
+
+        const battingTeam = data.battingTeam || "";
+        const bowlingTeam = data.bowlingTeam || "";
+        const battingIsDragons = battingTeam.toLowerCase().includes("dragon");
+        const bowlingIsDragons = bowlingTeam.toLowerCase().includes("dragon");
+        const dragonsPlaying = battingIsDragons || bowlingIsDragons;
+
+        if (dragonsPlaying) {
+          if (battingIsDragons) {
+            leftLogo.src = "dragons.png";
+            leftLogo.style.display = "block";
+          } else {
+            leftLogo.src = "enemy.png";
+            leftLogo.style.display = "block";
+          }
+
+          if (bowlingIsDragons) {
+            rightLogo.src = "dragons.png";
+            rightLogo.style.display = "block";
+          } else {
+            rightLogo.src = "enemy.png";
+            rightLogo.style.display = "block";
+          }
         }
 
         const targetDiv = document.getElementById("target-text");
