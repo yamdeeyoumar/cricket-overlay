@@ -16,6 +16,12 @@
     .overlay-wrapper {
       position: fixed;
       bottom: 0;
+      left: 0;
+      width: 100vw;
+      padding: 0 16px 16px;
+      box-sizing: border-box;
+      display: flex;
+      justify-content: center;
       left: 50%;
       transform: translateX(-50%);
       width: min(100vw, 1280px);
@@ -357,7 +363,8 @@
         const renderBatter = (element, player, isStriker) => {
           if (player && player.name) {
             const nameClass = isStriker ? "player-name highlight" : "player-name";
-            element.innerHTML = `<span class="${nameClass}">${player.name}</span><span class="player-stats">${player.runs ?? "-"} (${player.balls ?? "-"})</span>`;
+            const displayName = isStriker ? `${player.name} *` : player.name;
+            element.innerHTML = `<span class="${nameClass}">${displayName}</span><span class="player-stats">${player.runs ?? "-"} (${player.balls ?? "-"})</span>`;
           } else {
             element.innerHTML = "";
           }
