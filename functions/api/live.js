@@ -25,21 +25,34 @@ export async function onRequest(context) {
     const html = await res.text();
 
     // Extract team names and scores from the VS section
-    const vsPattern = /<li class="win"[^>]*>\s*<span class="teamName">([^<]+)<\/span>\s*<span>(\d+\/\d+)<\/span>\s*<br\/>\s*<p[^>]*>\s*([\d.]+)\s*\/\d+\s*ov/gi;
+    // Pattern to match team name
+    const teamNamePattern = /<span class="teamName">([^<]+)<\/span>/g;
+    const teamNames = [...html.matchAll(teamNamePattern)];
+    
+    // Pattern to match scores (format: XX/X)
+    const scorePattern = /<span>(\d+\/\d+)<\/span>/g;
+    const scores = [...html.matchAll(scorePattern)];
+    
+    // Pattern to match overs (format: X.X /XX ov or X.X/XX Overs)
+    const oversPattern = /([\d.]+)\s*\/\d+\s*(?:ov|Overs)/gi;
+    const overs = [...html.matchAll(oversPattern)];
     
     let team1 = "Team A", team2 = "Team B";
     let innings1 = {}, innings2 = {};
     
-    const matches = [...html.matchAll(vsPattern)];
-    
-    if (matches.length >= 1) {
-      team1 = matches[0][1].trim();
-      innings1 = { score: matches[0][2], overs: matches[0][3] };
+    if (teamNames.length >= 1) {
+      team1 = teamNames[0][1].trim();
+    }
+    if (teamNames.length >= 2) {
+      team2 = teamNames[1][1].trim();
     }
     
-    if (matches.length >= 2) {
-      team2 = matches[1][1].trim();
-      innings2 = { score: matches[1][2], overs: matches[1][3] };
+    if (scores.length >= 1 && overs.length >= 1) {
+      innings1 = { score: scores[0][1], overs: overs[0][1] };
+    }
+    
+    if (scores.length >= 2 && overs.length >= 2) {
+      innings2 = { score: scores[1][1], overs: overs[1][1] };
     }
 
     // Determine batting team (team with current innings)
