@@ -1,92 +1,121 @@
-import { CheerioAPI, load } from "cheerio";
-
-export interface Env { }
-
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
-    const clubId = url.searchParams.get("clubId");
+  async fetch(req: Request): Promise<Response> {
+    const url = new URL(req.url);
     const matchId = url.searchParams.get("matchId");
+    const clubId = url.searchParams.get("clubId");
 
-    if (!clubId || !matchId) {
-      return new Response(JSON.stringify({ error: "Missing clubId or matchId" }), { status: 400 });
+    if (!matchId || !clubId) {
+      return new Response(JSON.stringify({ error: "Missing matchId or clubId" }), { status: 400 });
     }
 
-    const target = `https://cricclubs.com/QCF/viewScorecard.do?matchId=${matchId}&clubId=${clubId}`;
+    const target = `https://cricclubs.com/QCF/ballbyball.do?matchId=${matchId}&clubId=${clubId}`;
 
     try {
-      // Add browser-like headers so CricClubs doesn’t block the request
       const res = await fetch(target, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.9",
-          "Connection": "keep-alive",
-          "Referer": "https://cricclubs.com/"
-        }
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+          "Accept": "text/html,application/xhtml+xml",
+          "Referer": "https://cricclubs.com/",
+        },
       });
-
-      if (!res.ok) {
-        return new Response(JSON.stringify({ error: `Upstream error ${res.status}` }), { status: 502 });
-      }
 
       const html = await res.text();
-      const $: CheerioAPI = load(html);
 
-      // --- Extract team names ---
-      const teams = $(".teamTitle").map((_, el) => $(el).text().trim()).get();
-      const battingTeam = teams[0] || "Team A";
-      const bowlingTeam = teams[1] || "Team B";
+      // --- Extract meta info (for teams and scores) ---
+      const descMatch =
+        html.match(/<meta[^>]+property="og:description"[^>]+content="([^"]+)"/i) ||
+        html.match(/<meta[^>]+name="description"[^>]+content="([^"]+)"/i) ||
+        html.match(/<title>(.*?)<\/title>/i);
 
-      // --- Extract score (runs/wickets/overs) ---
-      const scoreText = $(".score").first().text().trim(); // Example: "123/4 (15.2)"
-      const scoreMatch = scoreText.match(/(\d+)\/(\d+)\s*\(([\d.]+)\)/);
-      const score = scoreMatch ? {
-        runs: parseInt(scoreMatch[1]),
-        wickets: parseInt(scoreMatch[2]),
-        overs: scoreMatch[3]
-      } : null;
+      const desc = descMatch ? descMatch[1] : "";
 
-      // --- Extract striker and non-striker (current batsmen) ---
-      const batsmen = $("#batsman tbody tr").map((_, el) => {
-        const cols = $(el).find("td").map((_, td) => $(td).text().trim()).get();
-        if (cols.length >= 3) {
-          return {
-            name: cols[0],
-            runs: parseInt(cols[1]) || 0,
-            balls: parseInt(cols[2]) || 0
+      const infoPattern =
+        /([A-Za-z\s]+)\s(\d+\/\d+)\(?([\d\.]+)\s*overs?\)?\s*([A-Za-z\s]+)\s(\d+\/\d+)\(?([\d\.]+)\s*overs?\)?/i;
+      const m = desc.match(infoPattern);
+
+      let team1 = "Team A",
+        team2 = "Team B",
+        innings1: any = {},
+        innings2: any = {};
+
+      if (m) {
+        [, team1, innings1.score, innings1.overs, team2, innings2.score, innings2.overs] = m;
+      }
+
+      // Determine batting/bowling
+      const battingTeam =
+        parseInt(innings2.score?.split("/")[0] || "0") > 0 ? team2.trim() : team1.trim();
+      const bowlingTeam = battingTeam === team1.trim() ? team2.trim() : team1.trim();
+
+      const target =
+        parseInt(innings1.score?.split("/")[0] || "0") > 0
+          ? parseInt(innings1.score.split("/")[0]) + 1
+          : null;
+
+      // --- Extract batting table ---
+      const batTableMatch = html.match(
+        /\| Batter \| R \| B \| 4s \| 6s \| SR \|([\s\S]*?)\| Bowler \|/i
+      );
+      let striker: any = null,
+        nonStriker: any = null;
+
+      if (batTableMatch) {
+        const rows = batTableMatch[1]
+          .split("\n")
+          .map((r) => r.trim())
+          .filter((r) => r.startsWith("| ["));
+
+        if (rows.length > 0) {
+          const parseBatter = (row: string) => {
+            const cells = row.split("|").map((c) => c.replace(/\*\*/g, "").trim());
+            return {
+              name: cells[1].replace(/\[|\]/g, ""),
+              runs: cells[2],
+              balls: cells[3],
+              fours: cells[4],
+              sixes: cells[5],
+              sr: cells[6],
+            };
+          };
+          striker = parseBatter(rows[0]);
+          if (rows[1]) nonStriker = parseBatter(rows[1]);
+        }
+      }
+
+      // --- Extract bowling table ---
+      const bowlMatch = html.match(/\| Bowler \| O \| M \| R \| W \| Econ \|([\s\S]*?)\n\n/i);
+      let bowler: any = null;
+
+      if (bowlMatch) {
+        const row = bowlMatch[1].split("\n").find((r) => r.startsWith("| ["));
+        if (row) {
+          const cells = row.split("|").map((c) => c.replace(/\*\*/g, "").trim());
+          bowler = {
+            name: cells[1].replace(/\[|\]/g, ""),
+            overs: cells[2],
+            runs: cells[4],
+            wickets: cells[5],
+            econ: cells[6],
           };
         }
-        return null;
-      }).get().filter(b => b);
+      }
 
-      const striker = batsmen[0] || null;
-      const nonStriker = batsmen[1] || null;
-
-      // --- Extract current bowler ---
-      const bowlerRow = $("#bowler tbody tr").first();
-      const bowlerCols = bowlerRow.find("td").map((_, td) => $(td).text().trim()).get();
-      const bowler = bowlerCols.length >= 5 ? {
-        name: bowlerCols[0],
-        overs: bowlerCols[1],
-        maidens: bowlerCols[2],
-        runs: parseInt(bowlerCols[3]) || 0,
-        wickets: parseInt(bowlerCols[4]) || 0
-      } : null;
-
-      return new Response(JSON.stringify({
-        battingTeam: { name: battingTeam },
-        bowlingTeam: { name: bowlingTeam },
-        score,
+      const payload = {
+        battingTeam,
+        bowlingTeam,
+        score: innings2.score || innings1.score,
+        overs: innings2.overs || innings1.overs,
+        target,
         striker,
         nonStriker,
-        bowler
-      }), {
-        headers: { "content-type": "application/json" }
-      });
+        bowler,
+      };
 
+      return new Response(JSON.stringify(payload), {
+        headers: { "content-type": "application/json" },
+      });
     } catch (err: any) {
       return new Response(JSON.stringify({ error: err.message }), { status: 500 });
     }
-  }
-}
+  },
+};

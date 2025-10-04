@@ -1,224 +1,213 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cricket Overlay</title>
   <style>
-    :root {
-      --bg: rgba(0, 0, 0, 0.0);
-      --panel: linear-gradient(90deg, #002244, #004488);
-      --accent: #FFD700;
-      --text: #ffffff;
-      --muted: rgba(255, 255, 255, 0.8);
-      --shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-      --radius: 10px;
-    }
-
     body {
       margin: 0;
-      background: var(--bg);
-      font-family: "Segoe UI", sans-serif;
-      color: var(--text);
-    }
-
-    /* QCF logo fixed top-left */
-    .qcf-badge {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      width: 60px;
-      height: 60px;
-      object-fit: contain;
-      border-radius: 50%;
+      overflow: hidden;
       background: transparent;
-      z-index: 9999;
+      font-family: "Poppins", sans-serif;
     }
 
-    .overlay-wrapper {
-      position: fixed;
-      bottom: 20px;
+    .overlay {
+      position: absolute;
+      bottom: 5%;
       left: 50%;
       transform: translateX(-50%);
       width: 90%;
-      max-width: 1400px;
-    }
-
-    .scorebar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 14px 20px;
-      border-radius: var(--radius) var(--radius) 0 0;
-      box-shadow: var(--shadow);
-      background: var(--panel);
-      border: 3px solid var(--accent);
-      border-bottom: none;
+      padding: 15px 30px;
+      border-radius: 20px;
+      background: rgba(0, 0, 0, 0.65);
+      color: white;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
     }
 
-    .team-box {
+    .team {
       display: flex;
       align-items: center;
       gap: 10px;
-      flex: 1;
     }
 
-    .team-logo {
-      width: 50px;
+    .team img {
       height: 50px;
-      object-fit: contain;
+      width: 50px;
       border-radius: 50%;
-      background: transparent;
-    }
-
-    .team-name {
-      font-size: 22px;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-
-    .team-icon {
-      width: 20px;
-      height: 20px;
       object-fit: contain;
     }
 
     .score {
-      flex: 1;
       text-align: center;
-      font-size: 36px;
-      font-weight: 900;
-      color: var(--accent);
+      font-size: 2em;
+      font-weight: 700;
     }
 
-    .overs {
-      font-size: 16px;
-      color: var(--muted);
-      margin-left: 6px;
+    .overs, .target {
+      font-size: 0.9em;
+      color: #ccc;
     }
 
     .players {
+      position: absolute;
+      bottom: -60px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      font-size: 1.1em;
+      text-shadow: 0 0 5px black;
       display: flex;
-      justify-content: space-around;
-      background: #111;
-      padding: 12px 20px;
-      border-radius: 0 0 var(--radius) var(--radius);
-      border: 3px solid var(--accent);
-      border-top: none;
-      box-shadow: var(--shadow);
-    }
-
-    .player-box {
+      flex-direction: column;
+      align-items: center;
       text-align: center;
-      flex: 1;
     }
 
-    .label {
-      font-size: 14px;
-      color: var(--muted);
-      text-transform: uppercase;
+    .qcf-logo {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      height: 60px;
+      width: 60px;
+      opacity: 0.85;
     }
 
-    .value {
-      font-size: 20px;
-      font-weight: 700;
-      margin-top: 2px;
+    .highlight {
+      color: gold;
+      font-weight: bold;
     }
 
-    .value span {
-      color: var(--accent);
+    /* ✅ Debug box */
+    #debug-box {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.75);
+      color: lime;
+      font-family: monospace;
+      font-size: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      width: 300px;
+      height: 200px;
+      overflow-y: auto;
+      display: none; /* hidden by default */
+      z-index: 9999;
     }
   </style>
 </head>
 
 <body>
-  <!-- QCF watermark -->
-  <img class="qcf-badge" src="qcf.png" alt="QCF Logo">
+  <img src="qcf.png" alt="QCF Logo" class="qcf-logo" />
 
-  <div class="overlay-wrapper">
-    <!-- Scoreboard -->
-    <div class="scorebar">
-      <!-- Dragons left -->
-      <div class="team-box">
-        <img class="team-logo" src="dragons.png" alt="Dragons Logo">
-        <div class="team-name" id="dragonsName">Dragons</div>
-        <img id="dragonsIcon" class="team-icon" src="" alt="">
-      </div>
-
-      <!-- Score -->
-      <div class="score" id="score">0/0 <span class="overs">(0.0 ov)</span></div>
-
-      <!-- Enemy right -->
-      <div class="team-box" style="justify-content:flex-end;">
-        <img id="enemyIcon" class="team-icon" src="" alt="">
-        <div class="team-name" id="enemyName">Enemy</div>
-        <img class="team-logo" src="enemy.png" alt="Enemy Logo">
-      </div>
+  <div class="overlay">
+    <div class="team left">
+      <img id="left-logo" src="dragons.png" alt="Dragons" />
+      <div id="left-name">Dragons</div>
+      <img id="left-icon" src="" style="height:25px;width:25px;display:none;">
     </div>
 
-    <!-- Players Panel -->
-    <div class="players">
-      <div class="player-box">
-        <div class="label">Striker</div>
-        <div class="value" id="striker">--</div>
-      </div>
-      <div class="player-box">
-        <div class="label">Non-Striker</div>
-        <div class="value" id="nonStriker">--</div>
-      </div>
-      <div class="player-box">
-        <div class="label">Bowler</div>
-        <div class="value" id="bowler">--</div>
-      </div>
+    <div class="score">
+      <div id="score-text">-- / --</div>
+      <div class="overs" id="overs-text">-- overs</div>
+      <div class="target" id="target-text"></div>
+    </div>
+
+    <div class="team right">
+      <img id="right-icon" src="" style="height:25px;width:25px;display:none;">
+      <div id="right-name">Opponent</div>
+      <img id="right-logo" src="enemy.png" alt="Enemy" />
     </div>
   </div>
 
-  <script>
-    const qs = new URLSearchParams(location.search);
-    const api = qs.get("api") || "";
-    const clubId = qs.get("clubId");
-    const matchId = qs.get("matchId");
-    const refreshMs = parseInt(qs.get("refreshMs") || "4000", 10);
+  <div class="players" id="players-info">
+    <div id="batters-text"></div>
+    <div id="bowler-text"></div>
+  </div>
 
-    async function update() {
+  <!-- ✅ Debug Box -->
+  <div id="debug-box"></div>
+
+  <script>
+    const query = new URLSearchParams(window.location.search);
+    const matchId = query.get("matchId");
+    const clubId = query.get("clubId");
+    const api = query.get("api") || window.location.origin;
+    const debug = query.get("debug") === "1";
+
+    const debugBox = document.getElementById("debug-box");
+    if (debug) debugBox.style.display = "block";
+
+    async function updateOverlay() {
       try {
         const res = await fetch(`${api}/api/live?clubId=${clubId}&matchId=${matchId}&t=${Date.now()}`);
         const data = await res.json();
 
-        // Detect if Dragons are batting
-        const dragonsBatting = (data.battingTeam?.name || "").toLowerCase().includes("dragon");
-
-        // Show icons beside names
-        document.getElementById("dragonsIcon").src = dragonsBatting ? "bat.png" : "ball.png";
-        document.getElementById("enemyIcon").src = dragonsBatting ? "ball.png" : "bat.png";
-
-        // Update names (in case API has official names)
-        document.getElementById("dragonsName").textContent = "Dragons";
-        document.getElementById("enemyName").textContent = "Enemy";
-
-        // Score
-        if (data.score) {
-          document.getElementById("score").innerHTML =
-            `${data.score.runs}/${data.score.wickets} <span class="overs">(${data.score.overs} ov)</span>`;
+        if (debug) {
+          debugBox.innerText = JSON.stringify(data, null, 2);
         }
 
-        // Players
-        document.getElementById("striker").innerHTML =
-          data.striker ? `${data.striker.name} <span>${data.striker.runs}(${data.striker.balls})</span>` : "--";
-        document.getElementById("nonStriker").innerHTML =
-          data.nonStriker ? `${data.nonStriker.name} <span>${data.nonStriker.runs}(${data.nonStriker.balls})</span>` : "--";
-        document.getElementById("bowler").innerHTML =
-          data.bowler ? `${data.bowler.name} <span>${data.bowler.wickets}-${data.bowler.runs} (${data.bowler.overs})</span>` : "--";
+        if (data.error) throw new Error(data.error);
 
-      } catch (e) {
-        console.error("Overlay fetch error:", e);
-      } finally {
-        setTimeout(update, refreshMs);
+        document.getElementById("score-text").innerText = data.score || "--/--";
+        document.getElementById("overs-text").innerText = `${data.overs || "--"} overs`;
+
+        document.getElementById("left-name").innerText = "Dragons";
+        document.getElementById("right-name").innerText = data.bowlingTeam || "Opponent";
+
+        const leftIcon = document.getElementById("left-icon");
+        const rightIcon = document.getElementById("right-icon");
+        leftIcon.style.display = rightIcon.style.display = "none";
+
+        if (data.battingTeam && data.battingTeam.toLowerCase().includes("dragon")) {
+          leftIcon.src = "bat.png";
+          leftIcon.style.display = "block";
+          rightIcon.src = "ball.png";
+          rightIcon.style.display = "block";
+        } else {
+          leftIcon.src = "ball.png";
+          leftIcon.style.display = "block";
+          rightIcon.src = "bat.png";
+          rightIcon.style.display = "block";
+        }
+
+        const targetDiv = document.getElementById("target-text");
+        if (data.target && parseInt(data.target) > 0 && data.battingTeam !== "Dragons") {
+          targetDiv.innerText = `Target: ${data.target}`;
+        } else {
+          targetDiv.innerText = "";
+        }
+
+        const battersDiv = document.getElementById("batters-text");
+        const bowlerDiv = document.getElementById("bowler-text");
+
+        if (data.striker && data.nonStriker) {
+          battersDiv.innerHTML = `
+            <span class="highlight">${data.striker.name}</span> ${data.striker.runs} (${data.striker.balls}) ⚡
+            <span>${data.nonStriker.name}</span> ${data.nonStriker.runs} (${data.nonStriker.balls})
+          `;
+        } else {
+          battersDiv.innerText = "";
+        }
+
+        if (data.bowler) {
+          bowlerDiv.innerHTML = `Bowler: <span class="highlight">${data.bowler.name}</span> ${data.bowler.overs}-${data.bowler.runs}-${data.bowler.wickets}`;
+        } else {
+          bowlerDiv.innerText = "";
+        }
+
+      } catch (err) {
+        console.log("Overlay error:", err);
+        if (debug) debugBox.innerText = "Error: " + err.message;
       }
     }
 
-    update();
+    setInterval(updateOverlay, 4000);
+    updateOverlay();
   </script>
 </body>
-
 </html>
