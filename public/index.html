@@ -18,55 +18,98 @@
       bottom: 0;
       left: 50%;
       transform: translateX(-50%);
-      width: min(1100px, 95vw);
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0;
+      width: min(100vw, 1280px);
+      padding: 0 16px 16px;
+      box-sizing: border-box;
     }
 
     .overlay {
       width: 100%;
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      padding: 12px 24px;
-      border-radius: 20px;
-      background: linear-gradient(90deg, #003366, #00224E);
+      align-items: stretch;
+      gap: 24px;
+      padding: 16px 28px;
+      border-radius: 24px 24px 0 0;
+      background: linear-gradient(90deg, #003366, #00224e);
       border: 3px solid gold;
+      border-bottom: 0;
       color: white;
       box-shadow: 0 0 25px rgba(0, 0, 0, .5);
       backdrop-filter: blur(8px);
+      text-shadow: 0 0 5px rgba(0, 0, 0, .6);
     }
 
-    .team {
+    .side {
+      flex: 1;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 24px;
+      min-width: 0;
     }
 
-    .team img {
-      height: 55px;
-      width: 55px;
+    .batting-side {
+      justify-content: flex-start;
+    }
+
+    .bowling-side {
+      justify-content: flex-end;
+    }
+
+    .team-block {
+      display: flex;
+      align-items: center;
+    }
+
+    .team-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 600;
+      font-size: 1.1em;
+    }
+
+    .team-row img.team-logo {
+      height: 58px;
+      width: 58px;
       object-fit: contain;
       filter: drop-shadow(0 0 4px rgba(0, 0, 0, .6));
     }
 
-    .score {
+    .team-row img.team-icon {
+      height: 28px;
+      width: 28px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 4px rgba(0, 0, 0, .6));
+    }
+
+    .score-card {
+      flex: 0 0 auto;
+      min-width: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
       text-align: center;
-      font-size: 1.85em;
+    }
+
+    .score {
+      font-size: 2.2em;
       font-weight: 700;
       color: gold;
+      line-height: 1;
     }
 
     .overs {
-      font-size: .95em;
-      color: #ccc;
+      font-size: 1em;
+      color: #dbe9ff;
+      letter-spacing: .03em;
     }
 
     .target {
       font-size: 1em;
-      color: #FFD700;
+      color: #ffd700;
       font-weight: bold;
       animation: pulse 1.5s infinite alternate;
     }
@@ -76,49 +119,10 @@
       to { text-shadow: 0 0 15px gold; }
     }
 
-    .players {
-      width: 100%;
-      color: white;
-      font-size: 1.2em;
-      text-shadow: 0 0 5px black;
-      display: flex;
-      align-items: stretch;
-      text-align: left;
-      background: linear-gradient(90deg, #003366, #00224E);
-      border: 3px solid gold;
-      border-top: 0;
-      padding: 18px 26px;
-      border-radius: 0;
-      gap: 20px;
-    }
-
-    .overlay {
-      border-radius: 20px 20px 0 0;
-      border-bottom: 0;
-    }
-
-    .players .batters {
-      flex: 2;
+    .players-block {
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .players .bowler {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      text-align: center;
-      gap: 8px;
-    }
-
-    .players-divider {
-      width: 3px;
-      background: rgba(255, 215, 0, .7);
-      border-radius: 3px;
-      align-self: stretch;
+      gap: 6px;
     }
 
     .player-line {
@@ -126,10 +130,7 @@
       justify-content: space-between;
       align-items: center;
       gap: 12px;
-    }
-
-    .players .bowler .player-line {
-      justify-content: center;
+      font-size: 1.05em;
     }
 
     .player-name {
@@ -138,7 +139,56 @@
 
     .player-stats {
       color: #f0f4ff;
-      font-size: .9em;
+      font-size: .95em;
+    }
+
+    .bowler-block {
+      text-align: right;
+      align-items: flex-end;
+    }
+
+    .bowling-side .players-block {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-end;
+      text-align: right;
+    }
+
+    .bowling-side .player-line {
+      justify-content: flex-end;
+    }
+
+    @media (max-width: 900px) {
+      .overlay {
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .side {
+        width: 100%;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 12px;
+      }
+
+      .team-block {
+        justify-content: center;
+      }
+
+      .players-block,
+      .bowling-side .players-block {
+        align-items: center;
+        text-align: center;
+      }
+
+      .player-line,
+      .bowling-side .player-line {
+        justify-content: center;
+      }
     }
 
     .qcf-logo {
@@ -181,32 +231,36 @@
 
   <div class="overlay-wrapper">
     <div class="overlay">
-      <div class="team left">
-        <img id="left-logo" src="dragons.png" alt="Dragons" />
-        <div id="left-name" style="font-weight:600;">Dragons</div>
-        <img id="left-icon" src="" style="height:25px;width:25px;display:none;">
+      <div class="side batting-side">
+        <div class="team-block">
+          <div class="team-row">
+            <img id="left-logo" class="team-logo" src="dragons.png" alt="Dragons" />
+            <div id="left-name">Dragons</div>
+            <img id="left-icon" class="team-icon" src="" style="display:none;" alt="Bat icon">
+          </div>
+        </div>
+        <div class="players-block">
+          <div id="striker-info" class="player-line"></div>
+          <div id="non-striker-info" class="player-line"></div>
+        </div>
       </div>
 
-      <div class="score">
-        <div id="score-text">-- / --</div>
-        <div class="overs" id="overs-text">-- overs</div>
-        <div class="target" id="target-text"></div>
+      <div class="score-card">
+        <div id="score-text" class="score">-- / --</div>
+        <div id="overs-text" class="overs">-- overs</div>
+        <div id="target-text" class="target"></div>
       </div>
 
-      <div class="team right">
-        <img id="right-icon" src="" style="height:25px;width:25px;display:none;">
-        <div id="right-name" style="font-weight:600;">Opponent</div>
-        <img id="right-logo" src="enemy.png" alt="Enemy" />
+      <div class="side bowling-side">
+        <div class="players-block bowler-block" id="bowler-info"></div>
+        <div class="team-block">
+          <div class="team-row" style="justify-content: flex-end; text-align: right;">
+            <img id="right-icon" class="team-icon" src="" style="display:none;" alt="Ball icon">
+            <div id="right-name">Opponent</div>
+            <img id="right-logo" class="team-logo" src="enemy.png" alt="Enemy" />
+          </div>
+        </div>
       </div>
-    </div>
-
-    <div class="players" id="players-info">
-      <div class="batters">
-        <div id="striker-info" class="player-line"></div>
-        <div id="non-striker-info" class="player-line"></div>
-      </div>
-      <div class="players-divider"></div>
-      <div class="bowler" id="bowler-info"></div>
     </div>
   </div>
 
@@ -295,7 +349,10 @@
         const strikerLine = document.getElementById("striker-info");
         const nonStrikerLine = document.getElementById("non-striker-info");
         const bowlerInfo = document.getElementById("bowler-info");
-        const { striker, nonStriker, bowler } = currentInnings;
+
+        const striker = (currentInnings && currentInnings.striker) || data.striker || null;
+        const nonStriker = (currentInnings && currentInnings.nonStriker) || data.nonStriker || null;
+        const bowler = (currentInnings && currentInnings.bowler) || data.bowler || null;
 
         const renderBatter = (element, player, isStriker) => {
           if (player && player.name) {
@@ -312,12 +369,7 @@
         if (bowler && bowler.name) {
           bowlerInfo.innerHTML = `
             <div class="player-line">
-              <span class="player-name">Bowler</span>
-            </div>
-            <div class="player-line">
               <span class="player-name highlight">${bowler.name}</span>
-            </div>
-            <div class="player-line">
               <span class="player-stats">${bowler.wickets ?? "-"}-${bowler.runs ?? "-"} (${bowler.overs ?? "-"})</span>
             </div>
           `;
