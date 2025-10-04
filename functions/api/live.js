@@ -11,13 +11,12 @@ export async function onRequest(context) {
     });
   }
 
-  // ✅ Use the live "ball by ball" page
   const target = `https://cricclubs.com/QCF/ballbyball.do?matchId=${matchId}&clubId=${clubId}`;
 
   try {
     const res = await fetch(target, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "User-Agent": "Mozilla/5.0",
         "Accept": "text/html,application/xhtml+xml",
         "Referer": "https://cricclubs.com/",
       },
@@ -25,10 +24,10 @@ export async function onRequest(context) {
 
     const html = await res.text();
 
-    // --- Extract team names and scores ---
-    const scoreRegex =
-      /<span class="teamName">([^<]+)<br><\/span>\s*<span>([\d/]+)<\/span>[\s\S]*?(\d+(?:\.\d+)?)\s*ov[\s\S]*?<span class="teamName">([^<]+)<br><\/span>\s*<span>([\d/]+)<\/span>[\s\S]*?(\d+(?:\.\d+)?)\s*ov/;
-    const match = html.match(scoreRegex);
+    // --- Extract team info from scoreboard header ---
+    const teamPattern =
+      /<span class="teamName">([^<]+)<\/span>[\s\S]*?<span>([\d/]+)<\/span>[\s\S]*?(\d+(?:\.\d+)?)\s*ov[\s\S]*?<span class="teamName">([^<]+)<\/span>[\s\S]*?<span>([\d/]+)<\/span>[\s\S]*?(\d+(?:\.\d+)?)\s*ov/;
+    const match = html.match(teamPattern);
 
     let team1 = "Team A",
       team2 = "Team B",
@@ -50,51 +49,67 @@ export async function onRequest(context) {
         ? parseInt(innings1.score.split("/")[0]) + 1
         : null;
 
-    // --- Extract batters ---
+    // --- Extract batsmen table (current striker & non-striker) ---
+    const batTableRegex =
+      /<table[^>]*id="battingTable"[^>]*>([\s\S]*?)<\/table>/i;
+    const batTable = html.match(batTableRegex);
     const batsmen = [];
-    const batsmanRegex =
-      /<a[^>]*>([^<]+)<\/a><\/th>\s*<th[^>]*><strong>(\d+)<\/strong><\/th>\s*<th[^>]*>(\d+)<\/th>/g;
-    let b;
-    while ((b = batsmanRegex.exec(html)) && batsmen.length < 2) {
-      batsmen.push({
-        name: b[1].trim(),
-        runs: b[2],
-        balls: b[3],
-      });
+
+    if (batTable) {
+      const rowRegex =
+        /<tr[^>]*>\s*<td[^>]*>(?:<a[^>]*>)?([^<]+?)(?:<\/a>)?<\/td>[\s\S]*?<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>/g;
+      let m;
+      while ((m = rowRegex.exec(batTable[1])) && batsmen.length < 2) {
+        batsmen.push({
+          name: m[1].trim(),
+          runs: m[2],
+          balls: m[3],
+        });
+      }
     }
 
     const striker = batsmen[0] || null;
     const nonStriker = batsmen[1] || null;
 
-    // --- Extract first bowler row ---
-    const bowlRegex =
-      /<a[^>]*>([^<]+)<\/a><\/th>\s*<th[^>]*>([\d.]+)<\/th>\s*<th[^>]*>(\d+)<\/th>\s*<th[^>]*>(\d+)<\/th>\s*<th[^>]*>(\d+)<\/th>/;
-    const bowlerMatch = html.match(bowlRegex);
+    // --- Extract bowler table (top of the list) ---
+    const bowlTableRegex =
+      /<table[^>]*id="bowlingTable"[^>]*>([\s\S]*?)<\/table>/i;
+    const bowlTable = html.match(bowlTableRegex);
+    let bowler = null;
 
-    const bowler = bowlerMatch
-      ? {
-          name: bowlerMatch[1].trim(),
-          overs: bowlerMatch[2],
-          runs: bowlerMatch[4],
-          wickets: bowlerMatch[5],
-        }
-      : null;
+    if (bowlTable) {
+      const bowlRowRegex =
+        /<tr[^>]*>\s*<td[^>]*>(?:<a[^>]*>)?([^<]+?)(?:<\/a>)?<\/td>[\s\S]*?<td[^>]*>([\d.]+)<\/td>\s*<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>/;
+      const b = bowlTable[1].match(bowlRowRegex);
+      if (b) {
+        bowler = {
+          name: b[1].trim(),
+          overs: b[2],
+          runs: b[4],
+          wickets: b[5],
+        };
+      }
+    }
 
-    const payload = {
-      ok: true,
-      battingTeam,
-      bowlingTeam,
-      innings1,
-      innings2,
-      target,
-      striker,
-      nonStriker,
-      bowler,
-    };
-
-    return new Response(JSON.stringify(payload, null, 2), {
-      headers: { "content-type": "application/json" },
-    });
+    // --- Return JSON response ---
+    return new Response(
+      JSON.stringify(
+        {
+          ok: true,
+          battingTeam,
+          bowlingTeam,
+          innings1,
+          innings2,
+          target,
+          striker,
+          nonStriker,
+          bowler,
+        },
+        null,
+        2
+      ),
+      { headers: { "content-type": "application/json" } }
+    );
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
