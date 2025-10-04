@@ -25,15 +25,14 @@ export async function onRequest(context) {
 
     const html = await res.text();
 
-    // --- Extract meta or quick score info ---
+    // --- Extract description from meta ---
     const descMatch =
       html.match(/<meta[^>]+property="og:description"[^>]+content="([^"]+)"/i) ||
       html.match(/<meta[^>]+name="description"[^>]+content="([^"]+)"/i) ||
       html.match(/<title>(.*?)<\/title>/i);
-
     const desc = descMatch ? descMatch[1] : "";
 
-    // Example: Dragons 145/7 (20.0 overs) Enemy 122/9 (20.0 overs)
+    // Parse score summary (two innings)
     const pattern =
       /([A-Za-z\s]+)\s(\d+\/\d+)\s*\(?([\d.]+)\s*overs?\)?\s*([A-Za-z\s]+)\s(\d+\/\d+)\s*\(?([\d.]+)\s*overs?\)?/i;
     const m = desc.match(pattern);
@@ -56,19 +55,32 @@ export async function onRequest(context) {
     const targetScore =
       innings1.score ? parseInt(innings1.score.split("/")[0]) + 1 : null;
 
-    // --- Extract last ball update info ---
+    // --- Extract last updateBall() call ---
     const updateCalls = [...html.matchAll(/updateBall\(([^)]+)\)/g)];
     const lastUpdate = updateCalls.pop();
-    let striker = null, nonStriker = null, bowler = null;
+    let striker = null,
+      nonStriker = null,
+      bowler = null;
 
     if (lastUpdate) {
-      const args = lastUpdate[1].split(",");
-      // Extract batsman & bowler names from JS call
-      striker = { name: args[11]?.replace(/['"]/g, "").trim() || null, runs: "-", balls: "-" };
-      bowler = { name: args[12]?.replace(/['"]/g, "").trim() || null, overs: "-", runs: "-", wickets: "-" };
+      const args = lastUpdate[1]
+        .split(",")
+        .map((a) => a.trim().replace(/['"]/g, ""));
+
+      striker = {
+        name: args[13] || "Unknown Batter",
+        runs: "-",
+        balls: "-",
+      };
+      bowler = {
+        name: args[14] || "Unknown Bowler",
+        overs: "-",
+        runs: "-",
+        wickets: "-",
+      };
     }
 
-    // --- Extract current batsmen scores ---
+    // --- Try to extract batsmen stats ---
     const batsmen = [];
     const batRegex = /<td[^>]*>\s*([\w\s.'-]+)\s*<\/td>\s*<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>/g;
     let matchBat;
@@ -79,13 +91,10 @@ export async function onRequest(context) {
         balls: matchBat[3],
       });
     }
+    if (batsmen.length > 0) striker = batsmen[0];
+    if (batsmen.length > 1) nonStriker = batsmen[1];
 
-    if (batsmen.length > 0) {
-      striker = batsmen[0];
-      nonStriker = batsmen[1] || null;
-    }
-
-    // --- Extract bowler (first one listed) ---
+    // --- Extract bowler table info ---
     const bowlRegex = /<td[^>]*>\s*([\w\s.'-]+)\s*<\/td>\s*<td[^>]*>(\d+\.\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>/;
     const b = html.match(bowlRegex);
     if (b) {
@@ -97,7 +106,6 @@ export async function onRequest(context) {
       };
     }
 
-    // --- Build JSON output ---
     const payload = {
       ok: true,
       battingTeam,
@@ -115,7 +123,6 @@ export async function onRequest(context) {
     return new Response(JSON.stringify(payload, null, 2), {
       headers: { "content-type": "application/json" },
     });
-
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,
