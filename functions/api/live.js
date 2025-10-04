@@ -11,10 +11,10 @@ export async function onRequest(context) {
     });
   }
 
-  const target = `https://cricclubs.com/QCF/ballbyball.do?matchId=${matchId}&clubId=${clubId}`;
+  const targetUrl = `https://cricclubs.com/QCF/ballbyball.do?matchId=${matchId}&clubId=${clubId}`;
 
   try {
-    const res = await fetch(target, {
+    const res = await fetch(targetUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0",
         "Accept": "text/html,application/xhtml+xml",
@@ -44,7 +44,7 @@ export async function onRequest(context) {
     const battingTeam =
       parseInt((innings2.score || "0").split("/")[0]) > 0 ? team2 : team1;
     const bowlingTeam = battingTeam === team1 ? team2 : team1;
-    const target =
+    const targetScore =
       innings1.score && parseInt(innings1.score)
         ? parseInt(innings1.score.split("/")[0]) + 1
         : null;
@@ -100,7 +100,7 @@ export async function onRequest(context) {
           bowlingTeam,
           innings1,
           innings2,
-          target,
+          target: targetScore,
           striker,
           nonStriker,
           bowler,
