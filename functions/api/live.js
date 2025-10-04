@@ -52,12 +52,21 @@ export async function onRequest(context) {
         const block2 = winBlocks[1][1];
         const name2 = block2.match(/<span class="teamName">([^<]+)<br>/);
         const score2 = block2.match(/<span>(\d+\/\d+)<\/span>/);
-        const overs2 = block2.match(/([\d.]+)\s*\/\d+\s*(?:ov|Overs)/i);
+        // Look for overs pattern like "2.3 /20 ov" (not "0/0 Overs")
+        const overs2 = block2.match(/([\d.]+)\s*\/\d+\s*ov(?:[^s]|$)/i);
         
         if (name2) team2 = name2[1].trim();
-        if (score2) innings2.score = score2[1];
-        if (overs2) innings2.overs = overs2[1];
-        else innings2.overs = "0"; // If no overs found, set to 0
+        if (score2) {
+          innings2.score = score2[1];
+          // If score is 0/0, innings hasn't started
+          if (score2[1] === "0/0") {
+            innings2.overs = "0";
+          } else if (overs2) {
+            innings2.overs = overs2[1];
+          } else {
+            innings2.overs = "0";
+          }
+        }
       }
     }
 
