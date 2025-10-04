@@ -53,7 +53,7 @@ export async function onRequest(context) {
         const name2 = block2.match(/<span class="teamName">([^<]+)<br>/);
         const score2 = block2.match(/<span>(\d+\/\d+)<\/span>/);
         // Look for overs pattern like "2.3 /20 ov" (not "0/0 Overs")
-        const overs2 = block2.match(/([\d.]+)\s*\/\d+\s*ov(?:[^s]|$)/i);
+        const overs2 = block2.match(/([\d.]+)\s*\/\d+(?:\.\d+)?\s*(?:ov|overs?)/i);
         
         if (name2) team2 = name2[1].trim();
         if (score2) {
