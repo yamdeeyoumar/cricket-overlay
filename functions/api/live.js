@@ -24,40 +24,38 @@ export async function onRequest(context) {
 
     const html = await res.text();
 
-    // --- Extract team info from scoreboard header ---
-    const teamPattern =
-      /<span class="teamName">([^<]+)<\/span>[\s\S]*?<span>([\d/]+)<\/span>[\s\S]*?(\d+(?:\.\d+)?)\s*ov[\s\S]*?<span class="teamName">([^<]+)<\/span>[\s\S]*?<span>([\d/]+)<\/span>[\s\S]*?(\d+(?:\.\d+)?)\s*ov/;
-    const match = html.match(teamPattern);
-
-    let team1 = "Team A",
-      team2 = "Team B",
-      innings1 = {},
-      innings2 = {};
-
-    if (match) {
-      team1 = match[1].trim();
-      innings1 = { score: match[2], overs: match[3] };
-      team2 = match[4].trim();
-      innings2 = { score: match[5], overs: match[6] };
+    // Extract team names and scores from the VS section
+    const vsPattern = /<li class="win"[^>]*>\s*<span class="teamName">([^<]+)<\/span>\s*<span>(\d+\/\d+)<\/span>\s*<br\/>\s*<p[^>]*>\s*([\d.]+)\s*\/\d+\s*ov/gi;
+    
+    let team1 = "Team A", team2 = "Team B";
+    let innings1 = {}, innings2 = {};
+    
+    const matches = [...html.matchAll(vsPattern)];
+    
+    if (matches.length >= 1) {
+      team1 = matches[0][1].trim();
+      innings1 = { score: matches[0][2], overs: matches[0][3] };
+    }
+    
+    if (matches.length >= 2) {
+      team2 = matches[1][1].trim();
+      innings2 = { score: matches[1][2], overs: matches[1][3] };
     }
 
-    const battingTeam =
-      parseInt((innings2.score || "0").split("/")[0]) > 0 ? team2 : team1;
+    // Determine batting team (team with current innings)
+    const battingTeam = parseInt((innings2.score || "0/0").split("/")[0]) > 0 ? team2 : team1;
     const bowlingTeam = battingTeam === team1 ? team2 : team1;
-    const targetScore =
-      innings1.score && parseInt(innings1.score)
-        ? parseInt(innings1.score.split("/")[0]) + 1
-        : null;
+    
+    // Calculate target
+    const targetScore = innings1.score ? parseInt(innings1.score.split("/")[0]) + 1 : null;
 
-    // --- Extract batsmen table (current striker & non-striker) ---
-    const batTableRegex =
-      /<table[^>]*id="battingTable"[^>]*>([\s\S]*?)<\/table>/i;
+    // Extract current batsmen from the batting table
+    const batTableRegex = /<table[^>]*class="table"[^>]*>[\s\S]*?<thead>[\s\S]*?<th>Batter<\/th>[\s\S]*?<\/thead>\s*<tbody>([\s\S]*?)<\/tbody>/i;
     const batTable = html.match(batTableRegex);
     const batsmen = [];
 
     if (batTable) {
-      const rowRegex =
-        /<tr[^>]*>\s*<td[^>]*>(?:<a[^>]*>)?([^<]+?)(?:<\/a>)?<\/td>[\s\S]*?<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>/g;
+      const rowRegex = /<th><a[^>]*>([^<]+)<\/a><\/th>\s*<th[^>]*><strong>(\d+)<\/strong><\/th>\s*<th[^>]*>(\d+)<\/th>/g;
       let m;
       while ((m = rowRegex.exec(batTable[1])) && batsmen.length < 2) {
         batsmen.push({
@@ -71,27 +69,25 @@ export async function onRequest(context) {
     const striker = batsmen[0] || null;
     const nonStriker = batsmen[1] || null;
 
-    // --- Extract bowler table (top of the list) ---
-    const bowlTableRegex =
-      /<table[^>]*id="bowlingTable"[^>]*>([\s\S]*?)<\/table>/i;
+    // Extract current bowler from the bowling table
+    const bowlTableRegex = /<table[^>]*class="table"[^>]*>[\s\S]*?<thead>[\s\S]*?<th[^>]*>Bowler<\/th>[\s\S]*?<\/thead>\s*<tbody>([\s\S]*?)<\/tbody>/i;
     const bowlTable = html.match(bowlTableRegex);
     let bowler = null;
 
     if (bowlTable) {
-      const bowlRowRegex =
-        /<tr[^>]*>\s*<td[^>]*>(?:<a[^>]*>)?([^<]+?)(?:<\/a>)?<\/td>[\s\S]*?<td[^>]*>([\d.]+)<\/td>\s*<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>/;
+      const bowlRowRegex = /<th><a[^>]*>([^<]+)<\/a><\/th>\s*<th[^>]*>([\d.]+)<\/th>\s*<th[^>]*>\d+<\/th>\s*<th[^>]*>(\d+)<\/th>\s*<th[^>]*>(\d+)<\/th>/;
       const b = bowlTable[1].match(bowlRowRegex);
       if (b) {
         bowler = {
           name: b[1].trim(),
           overs: b[2],
-          runs: b[4],
-          wickets: b[5],
+          runs: b[3],
+          wickets: b[4],
         };
       }
     }
 
-    // --- Return JSON response ---
+    // Return JSON response
     return new Response(
       JSON.stringify(
         {
