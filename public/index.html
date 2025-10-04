@@ -23,9 +23,10 @@
       align-items: center;
       padding: 15px 30px;
       border-radius: 20px;
-      background: rgba(0, 0, 0, 0.65);
+      background: linear-gradient(90deg, #003366 0%, #00224E 100%);
+      border: 3px solid gold;
       color: white;
-      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+      box-shadow: 0 0 25px rgba(0,0,0,0.5);
       backdrop-filter: blur(8px);
     }
 
@@ -36,21 +37,35 @@
     }
 
     .team img {
-      height: 50px;
-      width: 50px;
-      border-radius: 50%;
+      height: 55px;
+      width: 55px;
       object-fit: contain;
+      border: none; /* no outlines around logos */
+      filter: drop-shadow(0 0 4px rgba(0,0,0,0.6));
     }
 
     .score {
       text-align: center;
       font-size: 2em;
       font-weight: 700;
+      color: gold;
     }
 
-    .overs, .target {
-      font-size: 0.9em;
+    .overs {
+      font-size: 0.95em;
       color: #ccc;
+    }
+
+    .target {
+      font-size: 1em;
+      color: #FFD700;
+      font-weight: bold;
+      animation: pulse 1.5s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { text-shadow: 0 0 5px gold; }
+      to { text-shadow: 0 0 15px gold; }
     }
 
     .players {
@@ -73,7 +88,9 @@
       left: 15px;
       height: 60px;
       width: 60px;
-      opacity: 0.85;
+      opacity: 0.9;
+      object-fit: contain;
+      filter: drop-shadow(0 0 5px black);
     }
 
     .highlight {
@@ -81,7 +98,6 @@
       font-weight: bold;
     }
 
-    /* ✅ Debug box */
     #debug-box {
       position: fixed;
       bottom: 10px;
@@ -92,10 +108,10 @@
       font-size: 12px;
       padding: 10px;
       border-radius: 8px;
-      width: 300px;
+      width: 320px;
       height: 200px;
       overflow-y: auto;
-      display: none; /* hidden by default */
+      display: none;
       z-index: 9999;
     }
   </style>
@@ -107,7 +123,7 @@
   <div class="overlay">
     <div class="team left">
       <img id="left-logo" src="dragons.png" alt="Dragons" />
-      <div id="left-name">Dragons</div>
+      <div id="left-name" style="font-weight:600;">Dragons</div>
       <img id="left-icon" src="" style="height:25px;width:25px;display:none;">
     </div>
 
@@ -119,7 +135,7 @@
 
     <div class="team right">
       <img id="right-icon" src="" style="height:25px;width:25px;display:none;">
-      <div id="right-name">Opponent</div>
+      <div id="right-name" style="font-weight:600;">Opponent</div>
       <img id="right-logo" src="enemy.png" alt="Enemy" />
     </div>
   </div>
@@ -129,7 +145,6 @@
     <div id="bowler-text"></div>
   </div>
 
-  <!-- ✅ Debug Box -->
   <div id="debug-box"></div>
 
   <script>
@@ -147,10 +162,7 @@
         const res = await fetch(`${api}/api/live?clubId=${clubId}&matchId=${matchId}&t=${Date.now()}`);
         const data = await res.json();
 
-        if (debug) {
-          debugBox.innerText = JSON.stringify(data, null, 2);
-        }
-
+        if (debug) debugBox.innerText = JSON.stringify(data, null, 2);
         if (data.error) throw new Error(data.error);
 
         document.getElementById("score-text").innerText = data.score || "--/--";
@@ -164,22 +176,20 @@
         leftIcon.style.display = rightIcon.style.display = "none";
 
         if (data.battingTeam && data.battingTeam.toLowerCase().includes("dragon")) {
-          leftIcon.src = "bat.png";
-          leftIcon.style.display = "block";
-          rightIcon.src = "ball.png";
-          rightIcon.style.display = "block";
+          leftIcon.src = "bat.png"; leftIcon.style.display = "block";
+          rightIcon.src = "ball.png"; rightIcon.style.display = "block";
         } else {
-          leftIcon.src = "ball.png";
-          leftIcon.style.display = "block";
-          rightIcon.src = "bat.png";
-          rightIcon.style.display = "block";
+          leftIcon.src = "ball.png"; leftIcon.style.display = "block";
+          rightIcon.src = "bat.png"; rightIcon.style.display = "block";
         }
 
         const targetDiv = document.getElementById("target-text");
         if (data.target && parseInt(data.target) > 0 && data.battingTeam !== "Dragons") {
           targetDiv.innerText = `Target: ${data.target}`;
+          targetDiv.style.animation = "pulse 1.5s infinite alternate";
         } else {
           targetDiv.innerText = "";
+          targetDiv.style.animation = "none";
         }
 
         const battersDiv = document.getElementById("batters-text");
@@ -206,7 +216,7 @@
       }
     }
 
-    setInterval(updateOverlay, 4000);
+    setInterval(updateOverlay, 8000);
     updateOverlay();
   </script>
 </body>
