@@ -14,14 +14,15 @@
     }
 
     .overlay-wrapper {
-      position: absolute;
-      bottom: 5%;
+      position: fixed;
+      bottom: 0;
       left: 50%;
       transform: translateX(-50%);
-      width: 90%;
+      width: min(1100px, 95vw);
       display: flex;
       flex-direction: column;
       align-items: stretch;
+      gap: 0;
     }
 
     .overlay {
@@ -81,14 +82,63 @@
       font-size: 1.2em;
       text-shadow: 0 0 5px black;
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      margin-top: 18px;
+      align-items: stretch;
+      text-align: left;
       background: linear-gradient(90deg, #003366, #00224E);
       border: 3px solid gold;
+      border-top: 0;
       padding: 18px 26px;
-      border-radius: 20px;
+      border-radius: 0;
+      gap: 20px;
+    }
+
+    .overlay {
+      border-radius: 20px 20px 0 0;
+      border-bottom: 0;
+    }
+
+    .players .batters {
+      flex: 2;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .players .bowler {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: center;
+      gap: 8px;
+    }
+
+    .players-divider {
+      width: 3px;
+      background: rgba(255, 215, 0, .7);
+      border-radius: 3px;
+      align-self: stretch;
+    }
+
+    .player-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .players .bowler .player-line {
+      justify-content: center;
+    }
+
+    .player-name {
+      font-weight: 600;
+    }
+
+    .player-stats {
+      color: #f0f4ff;
+      font-size: .9em;
     }
 
     .qcf-logo {
@@ -151,8 +201,12 @@
     </div>
 
     <div class="players" id="players-info">
-      <div id="batters-text"></div>
-      <div id="bowler-text"></div>
+      <div class="batters">
+        <div id="striker-info" class="player-line"></div>
+        <div id="non-striker-info" class="player-line"></div>
+      </div>
+      <div class="players-divider"></div>
+      <div class="bowler" id="bowler-info"></div>
     </div>
   </div>
 
@@ -238,23 +292,37 @@
           targetDiv.innerText = "";
         }
 
-        const battersDiv = document.getElementById("batters-text");
-        const bowlerDiv = document.getElementById("bowler-text");
+        const strikerLine = document.getElementById("striker-info");
+        const nonStrikerLine = document.getElementById("non-striker-info");
+        const bowlerInfo = document.getElementById("bowler-info");
         const { striker, nonStriker, bowler } = currentInnings;
 
-        if (striker && nonStriker) {
-          battersDiv.innerHTML = `
-            <span class="highlight">${striker.name}</span> ${striker.runs || '-'} (${striker.balls || '-'}) ⚡
-            <span>${nonStriker.name}</span> ${nonStriker.runs || '-'} (${nonStriker.balls || '-'})
+        const renderBatter = (element, player, isStriker) => {
+          if (player && player.name) {
+            const nameClass = isStriker ? "player-name highlight" : "player-name";
+            element.innerHTML = `<span class="${nameClass}">${player.name}</span><span class="player-stats">${player.runs ?? "-"} (${player.balls ?? "-"})</span>`;
+          } else {
+            element.innerHTML = "";
+          }
+        };
+
+        renderBatter(strikerLine, striker, true);
+        renderBatter(nonStrikerLine, nonStriker, false);
+
+        if (bowler && bowler.name) {
+          bowlerInfo.innerHTML = `
+            <div class="player-line">
+              <span class="player-name">Bowler</span>
+            </div>
+            <div class="player-line">
+              <span class="player-name highlight">${bowler.name}</span>
+            </div>
+            <div class="player-line">
+              <span class="player-stats">${bowler.wickets ?? "-"}-${bowler.runs ?? "-"} (${bowler.overs ?? "-"})</span>
+            </div>
           `;
         } else {
-          battersDiv.innerText = "";
-        }
-
-        if (bowler) {
-          bowlerDiv.innerHTML = `Bowler: <span class="highlight">${bowler.name}</span> ${bowler.overs || '-'}-${bowler.runs || '-'}-${bowler.wickets || '-'}`;
-        } else {
-          bowlerDiv.innerText = "";
+          bowlerInfo.innerHTML = "";
         }
 
       } catch (err) {
