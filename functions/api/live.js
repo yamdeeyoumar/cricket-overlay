@@ -1,28 +1,70 @@
+const jsonHeaders = {
+  "content-type": "application/json; charset=utf-8",
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET, OPTIONS",
+  "access-control-allow-headers": "content-type",
+  "cache-control": "no-store",
+};
+
+function jsonResponse(body, init = {}) {
+  return new Response(JSON.stringify(body, null, 2), {
+    ...init,
+    headers: {
+      ...jsonHeaders,
+      ...(init.headers || {}),
+    },
+  });
+}
+
+function textSnippet(value, length = 300) {
+  return value.replace(/\s+/g, " ").trim().slice(0, length);
+}
+
 export async function onRequest(context) {
   const { request } = context;
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: jsonHeaders });
+  }
+
   const url = new URL(request.url);
   const matchId = url.searchParams.get("matchId");
   const clubId = url.searchParams.get("clubId");
 
   if (!matchId || !clubId) {
-    return new Response(JSON.stringify({ error: "Missing matchId or clubId" }), {
-      status: 400,
-      headers: { "content-type": "application/json" },
-    });
+    return jsonResponse({ error: "Missing matchId or clubId" }, { status: 400 });
   }
 
-  const targetUrl = `https://cricclubs.com/QCF/ballbyball.do?matchId=${matchId}&clubId=${clubId}`;
+  const targetUrl = `https://cricclubs.com/QCF/ballbyball.do?matchId=${encodeURIComponent(matchId)}&clubId=${encodeURIComponent(clubId)}`;
 
   try {
     const res = await fetch(targetUrl, {
+      cf: { cacheTtl: 0, cacheEverything: false },
       headers: {
-        "User-Agent": "Mozilla/5.0",
-        "Accept": "text/html,application/xhtml+xml",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
         "Referer": "https://cricclubs.com/",
+        "Upgrade-Insecure-Requests": "1",
       },
     });
 
     const html = await res.text();
+
+    if (!res.ok) {
+      return jsonResponse(
+        {
+          error: `CricClubs request failed with HTTP ${res.status}`,
+          upstreamStatus: res.status,
+          upstreamStatusText: res.statusText,
+          targetUrl,
+          snippet: textSnippet(html),
+        },
+        { status: 502 }
+      );
+    }
 
     // Extract team names and scores from the VS section
     // Look for the schedule-logo section which contains team names
@@ -68,6 +110,17 @@ export async function onRequest(context) {
           }
         }
       }
+    }
+
+    if (!scheduleMatch || !innings1.score) {
+      return jsonResponse(
+        {
+          error: "Could not find CricClubs score data in the upstream response",
+          targetUrl,
+          snippet: textSnippet(html),
+        },
+        { status: 502 }
+      );
     }
 
     // Determine batting team (team with current innings)
@@ -118,28 +171,18 @@ export async function onRequest(context) {
     }
 
     // Return JSON response
-    return new Response(
-      JSON.stringify(
-        {
-          ok: true,
-          battingTeam,
-          bowlingTeam,
-          innings1,
-          innings2,
-          target: targetScore,
-          striker,
-          nonStriker,
-          bowler,
-        },
-        null,
-        2
-      ),
-      { headers: { "content-type": "application/json" } }
-    );
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { "content-type": "application/json" },
+    return jsonResponse({
+      ok: true,
+      battingTeam,
+      bowlingTeam,
+      innings1,
+      innings2,
+      target: targetScore,
+      striker,
+      nonStriker,
+      bowler,
     });
+  } catch (err) {
+    return jsonResponse({ error: err.message }, { status: 500 });
   }
 }

@@ -282,13 +282,29 @@
     const debugBox = document.getElementById("debug-box");
     if (debug) debugBox.style.display = "block";
 
+    function showOverlayError(message) {
+      document.getElementById("score-text").innerText = "ERROR";
+      document.getElementById("overs-text").innerText = message;
+      document.getElementById("target-text").innerText = "";
+      document.getElementById("striker-info").innerHTML = "";
+      document.getElementById("non-striker-info").innerHTML = "";
+      document.getElementById("bowler-info").innerHTML = "";
+    }
+
     async function updateOverlay() {
       try {
-        const res = await fetch(`${api}/api/live?clubId=${clubId}&matchId=${matchId}&t=${Date.now()}`);
-        const data = await res.json();
+        if (!matchId || !clubId) {
+          throw new Error("Add matchId and clubId to the overlay URL");
+        }
+
+        const res = await fetch(`${api}/api/live?clubId=${encodeURIComponent(clubId)}&matchId=${encodeURIComponent(matchId)}&t=${Date.now()}`);
+        const contentType = res.headers.get("content-type") || "";
+        const data = contentType.includes("application/json")
+          ? await res.json()
+          : { error: await res.text() };
 
         if (debug) debugBox.innerText = JSON.stringify(data, null, 2);
-        if (data.error) throw new Error(data.error);
+        if (!res.ok || data.error) throw new Error(data.error || `API returned HTTP ${res.status}`);
 
         const parseRuns = (scoreString) => {
           if (!scoreString) return 0;
@@ -386,6 +402,7 @@
 
       } catch (err) {
         console.log("Overlay error:", err);
+        showOverlayError(err.message);
         if (debug) debugBox.innerText = "Error: " + err.message;
       }
     }
