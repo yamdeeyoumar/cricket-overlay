@@ -20,6 +20,87 @@ function textSnippet(value, length = 300) {
   return value.replace(/\s+/g, " ").trim().slice(0, length);
 }
 
+function decodeHtmlEntities(value = "") {
+  const named = {
+    amp: "&",
+    lt: "<",
+    gt: ">",
+    quot: '"',
+    apos: "'",
+    nbsp: " ",
+  };
+
+  return value.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (entity, code) => {
+    const lowerCode = code.toLowerCase();
+
+    if (lowerCode[0] === "#") {
+      const base = lowerCode[1] === "x" ? 16 : 10;
+      const number = parseInt(lowerCode.slice(base === 16 ? 2 : 1), base);
+      return Number.isNaN(number) ? entity : String.fromCodePoint(number);
+    }
+
+    return named[lowerCode] || entity;
+  });
+}
+
+function stripTags(value = "") {
+  return decodeHtmlEntities(value.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+}
+
+function getAttribute(value = "", attributeName) {
+  const attr = new RegExp(`${attributeName}\\s*=\\s*(["'])(.*?)\\1`, "i").exec(value);
+  return attr ? decodeHtmlEntities(attr[2]) : "";
+}
+
+function parseScorecardTeams(scheduleHtml = "") {
+  const entries = [];
+  const liPattern = /<li\b([^>]*)>([\s\S]*?)<\/li>/gi;
+  let liMatch;
+
+  while ((liMatch = liPattern.exec(scheduleHtml))) {
+    const [, attributes, content] = liMatch;
+    const className = getAttribute(attributes, "class");
+    const logoMatch = content.match(/<img\b[^>]*src\s*=\s*(["'])(.*?)\1/i);
+
+    if (/\b(?:win|lose|tie)\b/i.test(className)) {
+      const teamNameMatch = content.match(/<span\b[^>]*class\s*=\s*(["'])teamName\1[^>]*>([\s\S]*?)<\/span>/i);
+      const scoreMatch = content.match(/<span\b(?![^>]*class\s*=\s*(["'])teamName\1)[^>]*>\s*([^<]*\d+\s*\/\s*\d+[^<]*)<\/span>/i);
+      const oversMatch = content.match(/<p\b[^>]*>([\s\S]*?)<\/p>/i);
+
+      entries.push({
+        type: "team",
+        resultClass: className,
+        name: teamNameMatch ? stripTags(teamNameMatch[2]) : "",
+        score: scoreMatch ? stripTags(scoreMatch[2]).replace(/\s+/g, "") : "",
+        overs: oversMatch ? stripTags(oversMatch[1]) : "",
+        logo: logoMatch ? decodeHtmlEntities(logoMatch[2]) : "",
+      });
+    } else if (logoMatch) {
+      entries.push({ type: "logo", src: decodeHtmlEntities(logoMatch[2]) });
+    } else if (/\bvs\b/i.test(className) || /\bVS\b/.test(stripTags(content))) {
+      entries.push({ type: "vs" });
+    }
+  }
+
+  const teams = entries.filter((entry) => entry.type === "team");
+
+  for (const [teamIndex, team] of teams.entries()) {
+    if (team.logo) continue;
+
+    const entryIndex = entries.indexOf(team);
+    const adjacentIndexes = teamIndex === 0
+      ? [entryIndex - 1, entryIndex + 1]
+      : [entryIndex + 1, entryIndex - 1];
+    const logoEntry = adjacentIndexes
+      .map((index) => entries[index])
+      .find((entry) => entry && entry.type === "logo");
+
+    if (logoEntry) team.logo = logoEntry.src;
+  }
+
+  return teams;
+}
+
 export async function onRequest(context) {
   const { request } = context;
 
@@ -73,43 +154,24 @@ export async function onRequest(context) {
     
     let team1 = "Team A", team2 = "Team B";
     let innings1 = {}, innings2 = {};
-    
-    if (scheduleMatch) {
-      // Pattern to match each team's complete info block
-      const winBlockPattern = /<li class="win"[^>]*>([\s\S]*?)<\/li>/g;
-      const winBlocks = [...scheduleMatch[0].matchAll(winBlockPattern)];
-      
-      if (winBlocks.length >= 1) {
-        const block1 = winBlocks[0][1];
-        const name1 = block1.match(/<span class="teamName">([^<]+)<br>/);
-        const score1 = block1.match(/<span>(\d+\/\d+)<\/span>/);
-        const overs1 = block1.match(/([\d.]+)\s*\/\d+\s*(?:ov|Overs)/i);
-        
-        if (name1) team1 = name1[1].trim();
-        if (score1) innings1.score = score1[1];
-        if (overs1) innings1.overs = overs1[1];
-      }
-      
-      if (winBlocks.length >= 2) {
-        const block2 = winBlocks[1][1];
-        const name2 = block2.match(/<span class="teamName">([^<]+)<br>/);
-        const score2 = block2.match(/<span>(\d+\/\d+)<\/span>/);
-        // Look for overs pattern like "2.3 /20 ov" (not "0/0 Overs")
-        const overs2 = block2.match(/([\d.]+)\s*\/\d+(?:\.\d+)?\s*(?:ov|overs?)/i);
-        
-        if (name2) team2 = name2[1].trim();
-        if (score2) {
-          innings2.score = score2[1];
-          // If score is 0/0, innings hasn't started
-          if (score2[1] === "0/0") {
-            innings2.overs = "0";
-          } else if (overs2) {
-            innings2.overs = overs2[1];
-          } else {
-            innings2.overs = "0";
-          }
-        }
-      }
+    const scorecardTeams = scheduleMatch ? parseScorecardTeams(scheduleMatch[0]) : [];
+
+    if (scorecardTeams.length >= 1) {
+      team1 = scorecardTeams[0].name || team1;
+      innings1 = {
+        score: scorecardTeams[0].score,
+        overs: (scorecardTeams[0].overs.match(/[\d.]+/) || [""])[0],
+      };
+    }
+
+    if (scorecardTeams.length >= 2) {
+      team2 = scorecardTeams[1].name || team2;
+      innings2 = {
+        score: scorecardTeams[1].score,
+        overs: (scorecardTeams[1].overs.match(/[\d.]+/) || ["0"])[0],
+      };
+
+      if (innings2.score === "0/0") innings2.overs = "0";
     }
 
     if (!scheduleMatch || !innings1.score) {
@@ -177,6 +239,7 @@ export async function onRequest(context) {
       bowlingTeam,
       innings1,
       innings2,
+      scorecardTeams,
       target: targetScore,
       striker,
       nonStriker,

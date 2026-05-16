@@ -120,6 +120,118 @@
       animation: pulse 1.5s infinite alternate;
     }
 
+
+    .scorecard-summary {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      width: 100%;
+      text-align: center;
+    }
+
+    .scorecard-summary li {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+    }
+
+    .scorecard-summary .team-logo-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .scorecard-summary .scorecard-logo {
+      height: 72px;
+      width: 72px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid rgba(255, 215, 0, .9);
+      filter: drop-shadow(0 0 6px rgba(0, 0, 0, .65));
+    }
+
+    .scorecard-summary .teamName {
+      display: block;
+      max-width: 230px;
+      color: white;
+      font-size: 1.2em;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .scorecard-summary .team-score {
+      color: gold;
+      font-size: 2.1em;
+      font-weight: 800;
+      line-height: 1.05;
+    }
+
+    .scorecard-summary .team-overs {
+      margin: 4px 0 0;
+      color: #dbe9ff;
+      font-size: .95em;
+      text-transform: lowercase;
+    }
+
+    .scorecard-summary .vs {
+      min-width: auto;
+      color: gold;
+      font-size: 1.15em;
+      font-weight: 800;
+      letter-spacing: .08em;
+    }
+
+    .scorecard-summary .win .teamName,
+    .scorecard-summary .win .team-score {
+      text-shadow: 0 0 12px rgba(255, 215, 0, .55);
+    }
+
+    body.scorecard-mode .qcf-logo,
+    body.scorecard-mode .side,
+    body.scorecard-mode .score-card {
+      display: none;
+    }
+
+    body.scorecard-mode .overlay {
+      justify-content: center;
+      align-items: center;
+      width: auto;
+      min-width: min(920px, calc(100vw - 32px));
+      padding: 14px 28px;
+      border-radius: 28px;
+      border-bottom: 3px solid gold;
+    }
+
+    body.scorecard-mode .scorecard-summary {
+      display: flex;
+    }
+
+    @media (max-width: 720px) {
+      .scorecard-summary {
+        gap: 10px;
+      }
+
+      .scorecard-summary .scorecard-logo {
+        height: 50px;
+        width: 50px;
+      }
+
+      .scorecard-summary .teamName {
+        max-width: 130px;
+        font-size: .9em;
+      }
+
+      .scorecard-summary .team-score {
+        font-size: 1.45em;
+      }
+    }
+
     @keyframes pulse {
       from { text-shadow: 0 0 5px gold; }
       to { text-shadow: 0 0 15px gold; }
@@ -195,6 +307,10 @@
       .bowling-side .player-line {
         justify-content: center;
       }
+
+      body.scorecard-mode .overlay {
+        flex-direction: row;
+      }
     }
 
     .qcf-logo {
@@ -237,6 +353,8 @@
 
   <div class="overlay-wrapper">
     <div class="overlay">
+      <ul id="scorecard-summary" class="scorecard-summary list-inline" aria-label="Scorecard summary"></ul>
+
       <div class="side batting-side">
         <div class="team-block">
           <div class="team-row">
@@ -278,6 +396,9 @@
     const clubId = query.get("clubId");
     const api = query.get("api") || window.location.origin;
     const debug = query.get("debug") === "1";
+    const scorecardOnly = query.get("scorecard") === "1" || query.get("view") === "scorecard";
+
+    if (scorecardOnly) document.body.classList.add("scorecard-mode");
 
     const debugBox = document.getElementById("debug-box");
     if (debug) debugBox.style.display = "block";
@@ -289,6 +410,65 @@
       document.getElementById("striker-info").innerHTML = "";
       document.getElementById("non-striker-info").innerHTML = "";
       document.getElementById("bowler-info").innerHTML = "";
+
+      if (scorecardOnly) {
+        document.getElementById("scorecard-summary").innerHTML = `<li>${escapeHtml(message)}</li>`;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[character]));
+    }
+
+    function normalizeOvers(overs) {
+      return String(overs || "").replace(/\s+/g, " ").trim();
+    }
+
+    function renderScorecardSummary(data) {
+      const teams = data.scorecardTeams || [];
+      const firstTeam = teams[0] || {
+        name: data.battingTeam || "Team A",
+        score: data.innings1?.score || "--/--",
+        overs: data.innings1?.overs ? `${data.innings1.overs} ov` : "-- ov",
+      };
+      const secondTeam = teams[1] || {
+        name: data.bowlingTeam || "Team B",
+        score: data.innings2?.score || "--/--",
+        overs: data.innings2?.overs ? `${data.innings2.overs} ov` : "-- ov",
+      };
+
+      const renderLogo = (team, fallback, alt) => {
+        const logo = team.logo || fallback;
+        return `
+          <li>
+            <span class="team-logo-link">
+              <img src="${escapeHtml(logo)}" class="scorecard-logo img-responsive img-circle" alt="${escapeHtml(alt)}">
+            </span>
+          </li>
+        `;
+      };
+
+      const renderTeam = (team) => `
+        <li class="${escapeHtml(team.resultClass || "")}">
+          <span class="teamName">${escapeHtml(team.name || "Team")}</span>
+          <span class="team-score">${escapeHtml(team.score || "--/--")}</span>
+          <p class="team-overs">${escapeHtml(normalizeOvers(team.overs) || "-- ov")}</p>
+        </li>
+      `;
+
+      document.getElementById("scorecard-summary").innerHTML = `
+        ${renderLogo(firstTeam, "enemy.png", firstTeam.name || "First team")}
+        ${renderTeam(firstTeam)}
+        <li class="vs">VS</li>
+        ${renderTeam(secondTeam)}
+        ${renderLogo(secondTeam, "dragons.png", secondTeam.name || "Second team")}
+      `;
     }
 
     async function updateOverlay() {
@@ -305,6 +485,11 @@
 
         if (debug) debugBox.innerText = JSON.stringify(data, null, 2);
         if (!res.ok || data.error) throw new Error(data.error || `API returned HTTP ${res.status}`);
+
+        if (scorecardOnly) {
+          renderScorecardSummary(data);
+          return;
+        }
 
         const parseRuns = (scoreString) => {
           if (!scoreString) return 0;
