@@ -3,8 +3,10 @@ const jsonHeaders = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, OPTIONS",
   "access-control-allow-headers": "content-type",
-  "cache-control": "no-store",
+  "cache-control": "no-store, no-cache, must-revalidate, max-age=0",
 };
+
+const DEFAULT_SOURCE = "https://cricclubs.com/QCF/ballbyball.do?matchId=3626&clubId=1834";
 
 function jsonResponse(body, init = {}) {
   return new Response(JSON.stringify(body, null, 2), {
@@ -16,7 +18,7 @@ function jsonResponse(body, init = {}) {
   });
 }
 
-function textSnippet(value, length = 300) {
+function textSnippet(value = "", length = 300) {
   return value.replace(/\s+/g, " ").trim().slice(0, length);
 }
 
@@ -43,62 +45,110 @@ function decodeHtmlEntities(value = "") {
   });
 }
 
-function stripTags(value = "") {
-  return decodeHtmlEntities(value.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+function getSourceUrl(requestUrl) {
+  const url = new URL(requestUrl);
+  const suppliedSource = url.searchParams.get("source") || url.searchParams.get("url");
+
+  if (suppliedSource) {
+    return new URL(suppliedSource);
+  }
+
+  const matchId = url.searchParams.get("matchId");
+  const clubId = url.searchParams.get("clubId");
+
+  if (matchId && clubId) {
+    return new URL(
+      `https://cricclubs.com/QCF/ballbyball.do?matchId=${encodeURIComponent(matchId)}&clubId=${encodeURIComponent(clubId)}`
+    );
+  }
+
+  return new URL(DEFAULT_SOURCE);
 }
 
-function getAttribute(value = "", attributeName) {
-  const attr = new RegExp(`${attributeName}\\s*=\\s*(["'])(.*?)\\1`, "i").exec(value);
-  return attr ? decodeHtmlEntities(attr[2]) : "";
+function assertAllowedSource(sourceUrl) {
+  if (sourceUrl.protocol !== "https:") {
+    throw new Error("Only https CricClubs links are supported");
+  }
+
+  if (sourceUrl.hostname !== "cricclubs.com" && sourceUrl.hostname !== "www.cricclubs.com") {
+    throw new Error("Only cricclubs.com links are supported");
+  }
 }
 
-function parseScorecardTeams(scheduleHtml = "") {
-  const entries = [];
-  const liPattern = /<li\b([^>]*)>([\s\S]*?)<\/li>/gi;
-  let liMatch;
+function findOpeningTagEnd(html, startIndex) {
+  let quote = "";
 
-  while ((liMatch = liPattern.exec(scheduleHtml))) {
-    const [, attributes, content] = liMatch;
-    const className = getAttribute(attributes, "class");
-    const logoMatch = content.match(/<img\b[^>]*src\s*=\s*(["'])(.*?)\1/i);
+  for (let index = startIndex; index < html.length; index += 1) {
+    const character = html[index];
 
-    if (/\b(?:win|lose|tie)\b/i.test(className)) {
-      const teamNameMatch = content.match(/<span\b[^>]*class\s*=\s*(["'])teamName\1[^>]*>([\s\S]*?)<\/span>/i);
-      const scoreMatch = content.match(/<span\b(?![^>]*class\s*=\s*(["'])teamName\1)[^>]*>\s*([^<]*\d+\s*\/\s*\d+[^<]*)<\/span>/i);
-      const oversMatch = content.match(/<p\b[^>]*>([\s\S]*?)<\/p>/i);
+    if (quote) {
+      if (character === quote) quote = "";
+      continue;
+    }
 
-      entries.push({
-        type: "team",
-        resultClass: className,
-        name: teamNameMatch ? stripTags(teamNameMatch[2]) : "",
-        score: scoreMatch ? stripTags(scoreMatch[2]).replace(/\s+/g, "") : "",
-        overs: oversMatch ? stripTags(oversMatch[1]) : "",
-        logo: logoMatch ? decodeHtmlEntities(logoMatch[2]) : "",
-      });
-    } else if (logoMatch) {
-      entries.push({ type: "logo", src: decodeHtmlEntities(logoMatch[2]) });
-    } else if (/\bvs\b/i.test(className) || /\bVS\b/.test(stripTags(content))) {
-      entries.push({ type: "vs" });
+    if (character === '"' || character === "'") {
+      quote = character;
+      continue;
+    }
+
+    if (character === ">") return index;
+  }
+
+  return -1;
+}
+
+function extractBalancedDiv(html, startIndex) {
+  const tagPattern = /<\/?div\b[^>]*>/gi;
+  tagPattern.lastIndex = startIndex;
+  let depth = 0;
+  let match;
+
+  while ((match = tagPattern.exec(html))) {
+    const tag = match[0];
+
+    if (/^<\s*\/\s*div/i.test(tag)) {
+      depth -= 1;
+      if (depth === 0) return html.slice(startIndex, tagPattern.lastIndex);
+    } else if (!/\/\s*>$/.test(tag)) {
+      depth += 1;
     }
   }
 
-  const teams = entries.filter((entry) => entry.type === "team");
+  return "";
+}
 
-  for (const [teamIndex, team] of teams.entries()) {
-    if (team.logo) continue;
+function absolutizeUrls(fragment, sourceUrl) {
+  return fragment.replace(/\b(src|href)\s*=\s*(["'])(.*?)\2/gi, (full, attribute, quote, value) => {
+    if (!value || /^(?:data:|mailto:|tel:|javascript:|#)/i.test(value)) return full;
 
-    const entryIndex = entries.indexOf(team);
-    const adjacentIndexes = teamIndex === 0
-      ? [entryIndex - 1, entryIndex + 1]
-      : [entryIndex + 1, entryIndex - 1];
-    const logoEntry = adjacentIndexes
-      .map((index) => entries[index])
-      .find((entry) => entry && entry.type === "logo");
+    try {
+      return `${attribute}=${quote}${new URL(decodeHtmlEntities(value), sourceUrl).href}${quote}`;
+    } catch {
+      return full;
+    }
+  });
+}
 
-    if (logoEntry) team.logo = logoEntry.src;
-  }
+function sanitizeFragment(fragment) {
+  return fragment
+    .replace(/<script\b[\s\S]*?<\/script>/gi, "")
+    .replace(/<style\b[\s\S]*?<\/style>/gi, "")
+    .replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/\s+(?:data-toggle|data-content|data-html|data-placement|data-trigger)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+}
 
-  return teams;
+function extractMatchSummary(html, sourceUrl) {
+  const summaryStart = html.search(/<div\b[^>]*class\s*=\s*(["'])[^"']*\bmatch-summary\b[^"']*\1[^>]*>/i);
+
+  if (summaryStart === -1) return "";
+
+  const openingTagEnd = findOpeningTagEnd(html, summaryStart);
+  if (openingTagEnd === -1) return "";
+
+  const fragment = extractBalancedDiv(html, summaryStart);
+  if (!fragment) return "";
+
+  return sanitizeFragment(absolutizeUrls(fragment, sourceUrl));
 }
 
 export async function onRequest(context) {
@@ -108,144 +158,61 @@ export async function onRequest(context) {
     return new Response(null, { status: 204, headers: jsonHeaders });
   }
 
-  const url = new URL(request.url);
-  const matchId = url.searchParams.get("matchId");
-  const clubId = url.searchParams.get("clubId");
-
-  if (!matchId || !clubId) {
-    return jsonResponse({ error: "Missing matchId or clubId" }, { status: 400 });
+  if (request.method !== "GET") {
+    return jsonResponse({ error: "Only GET requests are supported" }, { status: 405 });
   }
 
-  const targetUrl = `https://cricclubs.com/QCF/ballbyball.do?matchId=${encodeURIComponent(matchId)}&clubId=${encodeURIComponent(clubId)}`;
-
   try {
-    const res = await fetch(targetUrl, {
+    const sourceUrl = getSourceUrl(request.url);
+    assertAllowedSource(sourceUrl);
+    sourceUrl.searchParams.set("_overlayTs", Date.now().toString());
+
+    const upstreamResponse = await fetch(sourceUrl.href, {
       cf: { cacheTtl: 0, cacheEverything: false },
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "Referer": "https://cricclubs.com/",
-        "Upgrade-Insecure-Requests": "1",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "accept-language": "en-US,en;q=0.9",
+        "cache-control": "no-cache",
+        pragma: "no-cache",
+        referer: "https://cricclubs.com/",
       },
     });
 
-    const html = await res.text();
+    const html = await upstreamResponse.text();
 
-    if (!res.ok) {
+    if (!upstreamResponse.ok) {
       return jsonResponse(
         {
-          error: `CricClubs request failed with HTTP ${res.status}`,
-          upstreamStatus: res.status,
-          upstreamStatusText: res.statusText,
-          targetUrl,
+          error: `CricClubs request failed with HTTP ${upstreamResponse.status}`,
+          upstreamStatus: upstreamResponse.status,
+          sourceUrl: sourceUrl.href,
           snippet: textSnippet(html),
         },
         { status: 502 }
       );
     }
 
-    // Extract team names and scores from the VS section
-    // Look for the schedule-logo section which contains team names
-    const scheduleSection = /<div class="schedule-logo[^"]*"[\s\S]*?<ul class="list-inline"[\s\S]*?<\/ul>/i;
-    const scheduleMatch = html.match(scheduleSection);
-    
-    let team1 = "Team A", team2 = "Team B";
-    let innings1 = {}, innings2 = {};
-    const scorecardTeams = scheduleMatch ? parseScorecardTeams(scheduleMatch[0]) : [];
+    const matchSummaryHtml = extractMatchSummary(html, sourceUrl);
 
-    if (scorecardTeams.length >= 1) {
-      team1 = scorecardTeams[0].name || team1;
-      innings1 = {
-        score: scorecardTeams[0].score,
-        overs: (scorecardTeams[0].overs.match(/[\d.]+/) || [""])[0],
-      };
-    }
-
-    if (scorecardTeams.length >= 2) {
-      team2 = scorecardTeams[1].name || team2;
-      innings2 = {
-        score: scorecardTeams[1].score,
-        overs: (scorecardTeams[1].overs.match(/[\d.]+/) || ["0"])[0],
-      };
-
-      if (innings2.score === "0/0") innings2.overs = "0";
-    }
-
-    if (!scheduleMatch || !innings1.score) {
+    if (!matchSummaryHtml) {
       return jsonResponse(
         {
-          error: "Could not find CricClubs score data in the upstream response",
-          targetUrl,
+          error: "Could not find a div with class match-summary in the CricClubs response",
+          sourceUrl: sourceUrl.href,
           snippet: textSnippet(html),
         },
         { status: 502 }
       );
     }
 
-    // Determine batting team (team with current innings)
-    const battingTeam = parseInt((innings2.score || "0/0").split("/")[0]) > 0 ? team2 : team1;
-    const bowlingTeam = battingTeam === team1 ? team2 : team1;
-    
-    // Calculate target
-    const targetScore = innings1.score ? parseInt(innings1.score.split("/")[0]) + 1 : null;
-
-    // Extract current batsmen from the batting table
-    const batTableRegex = /<table[^>]*class="table"[^>]*>[\s\S]*?<th>Batter<\/th>[\s\S]*?<tbody>([\s\S]*?)<\/tbody>/i;
-    const batTable = html.match(batTableRegex);
-    const batsmen = [];
-
-    if (batTable) {
-      // Simple pattern to find all batsman names and their stats
-      const batsmanPattern = /<th><a[^>]*>([^<]+)<\/a><\/th>[\s\S]*?<strong>(\d+)<\/strong>[\s\S]*?<th[^>]*>(\d+)<\/th>/g;
-      let match;
-      
-      while ((match = batsmanPattern.exec(batTable[1])) && batsmen.length < 2) {
-        batsmen.push({
-          name: match[1].trim(),
-          runs: match[2],
-          balls: match[3],
-        });
-      }
-    }
-
-    const striker = batsmen[0] || null;
-    const nonStriker = batsmen[1] || null;
-
-    // Extract current bowler from the bowling table
-    const bowlTableRegex = /<table[^>]*class="table"[^>]*>[\s\S]*?<thead>[\s\S]*?<th[^>]*>Bowler<\/th>[\s\S]*?<\/thead>\s*<tbody>([\s\S]*?)<\/tbody>/i;
-    const bowlTable = html.match(bowlTableRegex);
-    let bowler = null;
-
-    if (bowlTable) {
-      const bowlRowRegex = /<th><a[^>]*>([^<]+)<\/a><\/th>\s*<th[^>]*>([\d.]+)<\/th>\s*<th[^>]*>\d+<\/th>\s*<th[^>]*>(\d+)<\/th>\s*<th[^>]*>(\d+)<\/th>/;
-      const b = bowlTable[1].match(bowlRowRegex);
-      if (b) {
-        bowler = {
-          name: b[1].trim(),
-          overs: b[2],
-          runs: b[3],
-          wickets: b[4],
-        };
-      }
-    }
-
-    // Return JSON response
     return jsonResponse({
       ok: true,
-      battingTeam,
-      bowlingTeam,
-      innings1,
-      innings2,
-      scorecardTeams,
-      target: targetScore,
-      striker,
-      nonStriker,
-      bowler,
+      sourceUrl: sourceUrl.href,
+      fetchedAt: new Date().toISOString(),
+      html: matchSummaryHtml,
     });
-  } catch (err) {
-    return jsonResponse({ error: err.message }, { status: 500 });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, { status: 400 });
   }
 }

@@ -1,419 +1,247 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cricket Overlay</title>
+  <title>CricClubs Scoreboard Overlay</title>
   <style>
+    :root {
+      color-scheme: dark;
+      --overlay-bg: rgba(0, 15, 36, 0.9);
+      --overlay-border: #ffd700;
+      --overlay-text: #ffffff;
+      --overlay-muted: #d7e8ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+    }
+
     body {
       margin: 0;
       overflow: hidden;
       background: transparent;
-      font-family: "Poppins", sans-serif;
+      color: var(--overlay-text);
+      font-family: Arial, Helvetica, sans-serif;
     }
 
-    .overlay-wrapper {
+    a {
+      color: inherit;
+      text-decoration: none;
+      pointer-events: none;
+    }
+
+    .overlay-shell {
       position: fixed;
+      right: 0;
       bottom: 0;
       left: 0;
-      width: 100vw;
-      padding: 0 16px 16px;
-      box-sizing: border-box;
       display: flex;
       justify-content: center;
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(100vw, 1280px);
-      padding: 0 16px 16px;
-      box-sizing: border-box;
+      padding: 16px;
     }
 
-    .overlay {
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: stretch;
-      gap: 24px;
+    .scoreboard-card {
+      display: inline-flex;
+      min-width: min(920px, calc(100vw - 32px));
+      max-width: calc(100vw - 32px);
+      align-items: center;
+      justify-content: center;
       padding: 16px 28px;
-      border-radius: 24px 24px 0 0;
-      background: linear-gradient(90deg, #003366, #00224e);
-      border: 3px solid gold;
-      border-bottom: 0;
-      color: white;
-      box-shadow: 0 0 25px rgba(0, 0, 0, .5);
-      backdrop-filter: blur(8px);
-      text-shadow: 0 0 5px rgba(0, 0, 0, .6);
-    }
-
-    .side {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      min-width: 0;
-    }
-
-    .batting-side {
-      justify-content: flex-start;
-    }
-
-    .bowling-side {
-      justify-content: flex-end;
-    }
-
-    .team-block {
-      display: flex;
-      align-items: center;
-    }
-
-    .team-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-weight: 600;
-      font-size: 1.1em;
-    }
-
-    .team-row img.team-logo {
-      height: 58px;
-      width: 58px;
-      object-fit: contain;
-      filter: drop-shadow(0 0 4px rgba(0, 0, 0, .6));
-    }
-
-    .team-row img.team-icon {
-      height: 28px;
-      width: 28px;
-      object-fit: contain;
-      filter: drop-shadow(0 0 4px rgba(0, 0, 0, .6));
-    }
-
-    .score-card {
-      flex: 0 0 auto;
-      min-width: 220px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      gap: 6px;
+      overflow: hidden;
+      border: 3px solid var(--overlay-border);
+      border-radius: 28px;
+      background: linear-gradient(90deg, var(--overlay-bg), rgba(0, 34, 78, 0.92));
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
       text-align: center;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
     }
 
-    .score {
-      font-size: 2.2em;
-      font-weight: 700;
-      color: gold;
-      line-height: 1;
+    #scoreboard {
+      width: 100%;
     }
 
-    .overs {
-      font-size: 1em;
-      color: #dbe9ff;
-      letter-spacing: .03em;
+    #scoreboard .match-summary,
+    #scoreboard .row,
+    #scoreboard [class*="col-"] {
+      width: 100%;
+      margin: 0;
+      padding: 0;
     }
 
-    .target {
-      font-size: 1em;
-      color: #ffd700;
-      font-weight: bold;
-      animation: pulse 1.5s infinite alternate;
-    }
-
-
-    .scorecard-summary {
-      display: none;
+    #scoreboard .schedule-logo ul,
+    #scoreboard ul.list-inline {
+      display: flex !important;
+      width: 100%;
       align-items: center;
       justify-content: center;
-      gap: 22px;
+      gap: clamp(10px, 2.2vw, 28px);
       margin: 0;
       padding: 0;
       list-style: none;
-      width: 100%;
-      text-align: center;
     }
 
-    .scorecard-summary li {
+    #scoreboard li {
+      margin: 0;
+      padding: 0;
+    }
+
+    #scoreboard img {
+      display: block;
+      width: clamp(46px, 6vw, 76px);
+      height: clamp(46px, 6vw, 76px);
+      border: 2px solid rgba(255, 215, 0, 0.9);
+      border-radius: 999px;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.08);
+      filter: drop-shadow(0 3px 7px rgba(0, 0, 0, 0.7));
+    }
+
+    #scoreboard .teamName {
+      display: block;
+      max-width: 240px;
+      color: var(--overlay-text);
+      font-size: clamp(16px, 2vw, 24px);
+      font-weight: 800;
+      line-height: 1.12;
+      white-space: normal;
+    }
+
+    #scoreboard li.win,
+    #scoreboard li.lose,
+    #scoreboard li.tie {
       display: flex;
+      min-width: 160px;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-width: 0;
+      gap: 5px;
     }
 
-    .scorecard-summary .team-logo-link {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    #scoreboard li.win > span:not(.teamName),
+    #scoreboard li.lose > span:not(.teamName),
+    #scoreboard li.tie > span:not(.teamName) {
+      color: var(--overlay-border);
+      font-size: clamp(28px, 4vw, 48px);
+      font-weight: 900;
+      line-height: 1;
     }
 
-    .scorecard-summary .scorecard-logo {
-      height: 72px;
-      width: 72px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid rgba(255, 215, 0, .9);
-      filter: drop-shadow(0 0 6px rgba(0, 0, 0, .65));
-    }
-
-    .scorecard-summary .teamName {
-      display: block;
-      max-width: 230px;
-      color: white;
-      font-size: 1.2em;
+    #scoreboard p {
+      margin: 0;
+      color: var(--overlay-muted);
+      font-size: clamp(13px, 1.5vw, 18px);
       font-weight: 700;
-      line-height: 1.2;
-    }
-
-    .scorecard-summary .team-score {
-      color: gold;
-      font-size: 2.1em;
-      font-weight: 800;
-      line-height: 1.05;
-    }
-
-    .scorecard-summary .team-overs {
-      margin: 4px 0 0;
-      color: #dbe9ff;
-      font-size: .95em;
+      line-height: 1.1;
       text-transform: lowercase;
     }
 
-    .scorecard-summary .vs {
-      min-width: auto;
-      color: gold;
-      font-size: 1.15em;
-      font-weight: 800;
-      letter-spacing: .08em;
+    #scoreboard .vs {
+      color: var(--overlay-border);
+      font-size: clamp(15px, 1.6vw, 22px);
+      font-weight: 900;
+      letter-spacing: 0.12em;
     }
 
-    .scorecard-summary .win .teamName,
-    .scorecard-summary .win .team-score {
-      text-shadow: 0 0 12px rgba(255, 215, 0, .55);
+    .status-message {
+      color: var(--overlay-muted);
+      font-size: 18px;
+      font-weight: 700;
     }
 
-    body.scorecard-mode .qcf-logo,
-    body.scorecard-mode .side,
-    body.scorecard-mode .score-card {
-      display: none;
-    }
-
-    body.scorecard-mode .overlay {
-      justify-content: center;
-      align-items: center;
-      width: auto;
-      min-width: min(920px, calc(100vw - 32px));
-      padding: 14px 28px;
-      border-radius: 28px;
-      border-bottom: 3px solid gold;
-    }
-
-    body.scorecard-mode .scorecard-summary {
-      display: flex;
-    }
-
-    @media (max-width: 720px) {
-      .scorecard-summary {
-        gap: 10px;
-      }
-
-      .scorecard-summary .scorecard-logo {
-        height: 50px;
-        width: 50px;
-      }
-
-      .scorecard-summary .teamName {
-        max-width: 130px;
-        font-size: .9em;
-      }
-
-      .scorecard-summary .team-score {
-        font-size: 1.45em;
-      }
-    }
-
-    @keyframes pulse {
-      from { text-shadow: 0 0 5px gold; }
-      to { text-shadow: 0 0 15px gold; }
-    }
-
-    .players-block {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .player-line {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      font-size: 1.05em;
-    }
-
-    .player-name {
-      font-weight: 600;
-    }
-
-    .player-stats {
-      color: #f0f4ff;
-      font-size: .95em;
-    }
-
-    .bowler-block {
-      text-align: right;
-      align-items: flex-end;
-    }
-
-    .bowling-side .players-block {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      align-items: flex-end;
-      text-align: right;
-    }
-
-    .bowling-side .player-line {
-      justify-content: flex-end;
-    }
-
-    @media (max-width: 900px) {
-      .overlay {
-        flex-direction: column;
-        align-items: center;
-        gap: 20px;
-        padding: 20px;
-      }
-
-      .side {
-        width: 100%;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        gap: 12px;
-      }
-
-      .team-block {
-        justify-content: center;
-      }
-
-      .players-block,
-      .bowling-side .players-block {
-        align-items: center;
-        text-align: center;
-      }
-
-      .player-line,
-      .bowling-side .player-line {
-        justify-content: center;
-      }
-
-      body.scorecard-mode .overlay {
-        flex-direction: row;
-      }
-    }
-
-    .qcf-logo {
-      position: absolute;
-      top: 15px;
-      left: 15px;
-      height: 60px;
-      width: 60px;
-      opacity: .9;
-      object-fit: contain;
-      filter: drop-shadow(0 0 5px black);
-    }
-
-    .highlight {
-      color: gold;
-      font-weight: bold;
+    .status-message strong {
+      display: block;
+      color: var(--overlay-border);
+      font-size: 24px;
+      margin-bottom: 6px;
     }
 
     #debug-box {
       position: fixed;
-      bottom: 10px;
-      right: 10px;
-      background: rgba(0, 0, 0, .75);
-      color: lime;
-      font-family: monospace;
-      font-size: 12px;
-      padding: 10px;
-      border-radius: 8px;
-      width: 320px;
-      height: 200px;
-      overflow-y: auto;
+      top: 12px;
+      left: 12px;
       display: none;
-      z-index: 9999;
+      max-width: min(720px, calc(100vw - 24px));
+      max-height: 45vh;
+      overflow: auto;
+      padding: 12px;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.82);
+      color: #00ff99;
+      font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 700px) {
+      .overlay-shell {
+        padding: 8px;
+      }
+
+      .scoreboard-card {
+        min-width: calc(100vw - 16px);
+        max-width: calc(100vw - 16px);
+        padding: 12px;
+        border-radius: 18px;
+      }
+
+      #scoreboard .schedule-logo ul,
+      #scoreboard ul.list-inline {
+        gap: 8px;
+      }
+
+      #scoreboard li.win,
+      #scoreboard li.lose,
+      #scoreboard li.tie {
+        min-width: 90px;
+      }
     }
   </style>
 </head>
-
 <body>
-  <img src="qcf.png" alt="QCF Logo" class="qcf-logo" />
+  <main class="overlay-shell" aria-live="polite">
+    <section class="scoreboard-card">
+      <div id="scoreboard" class="status-message"><strong>Loading</strong>Fetching CricClubs scoreboard…</div>
+    </section>
+  </main>
 
-  <div class="overlay-wrapper">
-    <div class="overlay">
-      <ul id="scorecard-summary" class="scorecard-summary list-inline" aria-label="Scorecard summary"></ul>
-
-      <div class="side batting-side">
-        <div class="team-block">
-          <div class="team-row">
-            <img id="left-logo" class="team-logo" src="dragons.png" alt="Dragons" />
-            <div id="left-name">Dragons</div>
-            <img id="left-icon" class="team-icon" src="" style="display:none;" alt="Bat icon">
-          </div>
-        </div>
-        <div class="players-block">
-          <div id="striker-info" class="player-line"></div>
-          <div id="non-striker-info" class="player-line"></div>
-        </div>
-      </div>
-
-      <div class="score-card">
-        <div id="score-text" class="score">-- / --</div>
-        <div id="overs-text" class="overs">-- overs</div>
-        <div id="target-text" class="target"></div>
-      </div>
-
-      <div class="side bowling-side">
-        <div class="players-block bowler-block" id="bowler-info"></div>
-        <div class="team-block">
-          <div class="team-row" style="justify-content: flex-end; text-align: right;">
-            <img id="right-icon" class="team-icon" src="" style="display:none;" alt="Ball icon">
-            <div id="right-name">Opponent</div>
-            <img id="right-logo" class="team-logo" src="enemy.png" alt="Enemy" />
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="debug-box"></div>
+  <pre id="debug-box"></pre>
 
   <script>
+    const REFRESH_MS = 4000;
     const query = new URLSearchParams(window.location.search);
-    const matchId = query.get("matchId");
-    const clubId = query.get("clubId");
-    const api = query.get("api") || window.location.origin;
+    const apiBase = query.get("api") || window.location.origin;
     const debug = query.get("debug") === "1";
-    const scorecardOnly = query.get("scorecard") === "1" || query.get("view") === "scorecard";
-
-    if (scorecardOnly) document.body.classList.add("scorecard-mode");
-
+    const scoreboard = document.getElementById("scoreboard");
     const debugBox = document.getElementById("debug-box");
+
     if (debug) debugBox.style.display = "block";
 
-    function showOverlayError(message) {
-      document.getElementById("score-text").innerText = "ERROR";
-      document.getElementById("overs-text").innerText = message;
-      document.getElementById("target-text").innerText = "";
-      document.getElementById("striker-info").innerHTML = "";
-      document.getElementById("non-striker-info").innerHTML = "";
-      document.getElementById("bowler-info").innerHTML = "";
+    function apiUrl() {
+      const params = new URLSearchParams();
+      const source = query.get("source") || query.get("url");
+      const matchId = query.get("matchId");
+      const clubId = query.get("clubId");
 
-      if (scorecardOnly) {
-        document.getElementById("scorecard-summary").innerHTML = `<li>${escapeHtml(message)}</li>`;
+      if (source) {
+        params.set("source", source);
+      } else if (matchId && clubId) {
+        params.set("matchId", matchId);
+        params.set("clubId", clubId);
       }
+
+      params.set("t", Date.now().toString());
+      return `${apiBase}/api/live?${params.toString()}`;
+    }
+
+    function showError(message) {
+      scoreboard.className = "status-message";
+      scoreboard.innerHTML = `<strong>Scoreboard unavailable</strong>${escapeHtml(message)}`;
     }
 
     function escapeHtml(value) {
@@ -426,175 +254,28 @@
       }[character]));
     }
 
-    function normalizeOvers(overs) {
-      return String(overs || "").replace(/\s+/g, " ").trim();
-    }
-
-    function renderScorecardSummary(data) {
-      const teams = data.scorecardTeams || [];
-      const firstTeam = teams[0] || {
-        name: data.battingTeam || "Team A",
-        score: data.innings1?.score || "--/--",
-        overs: data.innings1?.overs ? `${data.innings1.overs} ov` : "-- ov",
-      };
-      const secondTeam = teams[1] || {
-        name: data.bowlingTeam || "Team B",
-        score: data.innings2?.score || "--/--",
-        overs: data.innings2?.overs ? `${data.innings2.overs} ov` : "-- ov",
-      };
-
-      const renderLogo = (team, fallback, alt) => {
-        const logo = team.logo || fallback;
-        return `
-          <li>
-            <span class="team-logo-link">
-              <img src="${escapeHtml(logo)}" class="scorecard-logo img-responsive img-circle" alt="${escapeHtml(alt)}">
-            </span>
-          </li>
-        `;
-      };
-
-      const renderTeam = (team) => `
-        <li class="${escapeHtml(team.resultClass || "")}">
-          <span class="teamName">${escapeHtml(team.name || "Team")}</span>
-          <span class="team-score">${escapeHtml(team.score || "--/--")}</span>
-          <p class="team-overs">${escapeHtml(normalizeOvers(team.overs) || "-- ov")}</p>
-        </li>
-      `;
-
-      document.getElementById("scorecard-summary").innerHTML = `
-        ${renderLogo(firstTeam, "enemy.png", firstTeam.name || "First team")}
-        ${renderTeam(firstTeam)}
-        <li class="vs">VS</li>
-        ${renderTeam(secondTeam)}
-        ${renderLogo(secondTeam, "dragons.png", secondTeam.name || "Second team")}
-      `;
-    }
-
-    async function updateOverlay() {
+    async function refreshScoreboard() {
       try {
-        if (!matchId || !clubId) {
-          throw new Error("Add matchId and clubId to the overlay URL");
-        }
-
-        const res = await fetch(`${api}/api/live?clubId=${encodeURIComponent(clubId)}&matchId=${encodeURIComponent(matchId)}&t=${Date.now()}`);
-        const contentType = res.headers.get("content-type") || "";
+        const response = await fetch(apiUrl(), { cache: "no-store" });
+        const contentType = response.headers.get("content-type") || "";
         const data = contentType.includes("application/json")
-          ? await res.json()
-          : { error: await res.text() };
+          ? await response.json()
+          : { error: await response.text() };
 
-        if (debug) debugBox.innerText = JSON.stringify(data, null, 2);
-        if (!res.ok || data.error) throw new Error(data.error || `API returned HTTP ${res.status}`);
+        if (debug) debugBox.textContent = JSON.stringify(data, null, 2);
+        if (!response.ok || data.error) throw new Error(data.error || `API returned HTTP ${response.status}`);
 
-        if (scorecardOnly) {
-          renderScorecardSummary(data);
-          return;
-        }
-
-        const parseRuns = (scoreString) => {
-          if (!scoreString) return 0;
-          const runsMatch = scoreString.toString().match(/\d+/);
-          return runsMatch ? parseInt(runsMatch[0], 10) : 0;
-        };
-
-        const innings1 = data.innings1 || {};
-        const innings2 = data.innings2 || {};
-        const hasInnings2Score = parseRuns(innings2.score) > 0;
-        const currentInnings = hasInnings2Score ? innings2 : innings1;
-
-        document.getElementById("score-text").innerText = currentInnings.score || "--/--";
-        document.getElementById("overs-text").innerText = `${currentInnings.overs || "--"} overs`;
-
-        document.getElementById("left-name").innerText = data.battingTeam || "Dragons";
-        document.getElementById("right-name").innerText = data.bowlingTeam || "Opponent";
-
-        const leftIcon = document.getElementById("left-icon");
-        const rightIcon = document.getElementById("right-icon");
-        const leftLogo = document.getElementById("left-logo");
-        const rightLogo = document.getElementById("right-logo");
-
-        leftLogo.style.display = "none";
-        rightLogo.style.display = "none";
-
-        leftIcon.src = "bat.png";
-        rightIcon.src = "ball.png";
-        leftIcon.style.display = "block";
-        rightIcon.style.display = "block";
-
-        const battingTeam = data.battingTeam || "";
-        const bowlingTeam = data.bowlingTeam || "";
-        const battingIsDragons = battingTeam.toLowerCase().includes("dragon");
-        const bowlingIsDragons = bowlingTeam.toLowerCase().includes("dragon");
-        const dragonsPlaying = battingIsDragons || bowlingIsDragons;
-
-        if (dragonsPlaying) {
-          if (battingIsDragons) {
-            leftLogo.src = "dragons.png";
-            leftLogo.style.display = "block";
-          } else {
-            leftLogo.src = "enemy.png";
-            leftLogo.style.display = "block";
-          }
-
-          if (bowlingIsDragons) {
-            rightLogo.src = "dragons.png";
-            rightLogo.style.display = "block";
-          } else {
-            rightLogo.src = "enemy.png";
-            rightLogo.style.display = "block";
-          }
-        }
-
-        const targetDiv = document.getElementById("target-text");
-        const chaseActive = Boolean(innings1.score && currentInnings === innings2);
-        if (chaseActive && data.target && parseInt(data.target, 10) > 0) {
-          targetDiv.innerText = `Target: ${data.target}`;
-        } else {
-          targetDiv.innerText = "";
-        }
-
-        const strikerLine = document.getElementById("striker-info");
-        const nonStrikerLine = document.getElementById("non-striker-info");
-        const bowlerInfo = document.getElementById("bowler-info");
-
-        const striker = (currentInnings && currentInnings.striker) || data.striker || null;
-        const nonStriker = (currentInnings && currentInnings.nonStriker) || data.nonStriker || null;
-        const bowler = (currentInnings && currentInnings.bowler) || data.bowler || null;
-
-        const renderBatter = (element, player, isStriker) => {
-          if (player && player.name) {
-            const nameClass = isStriker ? "player-name highlight" : "player-name";
-            const displayName = isStriker ? `${player.name} *` : player.name;
-            element.innerHTML = `<span class="${nameClass}">${displayName}</span><span class="player-stats">${player.runs ?? "-"} (${player.balls ?? "-"})</span>`;
-          } else {
-            element.innerHTML = "";
-          }
-        };
-
-        renderBatter(strikerLine, striker, true);
-        renderBatter(nonStrikerLine, nonStriker, false);
-
-        if (bowler && bowler.name) {
-          bowlerInfo.innerHTML = `
-            <div class="player-line">
-              <span class="player-name highlight">${bowler.name}</span>
-              <span class="player-stats">${bowler.wickets ?? "-"}-${bowler.runs ?? "-"} (${bowler.overs ?? "-"})</span>
-            </div>
-          `;
-        } else {
-          bowlerInfo.innerHTML = "";
-        }
-
-      } catch (err) {
-        console.log("Overlay error:", err);
-        showOverlayError(err.message);
-        if (debug) debugBox.innerText = "Error: " + err.message;
+        scoreboard.className = "";
+        scoreboard.innerHTML = data.html;
+      } catch (error) {
+        console.error("Scoreboard refresh failed", error);
+        if (debug) debugBox.textContent = `Error: ${error.message}`;
+        showError(error.message);
       }
     }
 
-    setInterval(updateOverlay, 8000);
-    updateOverlay();
+    refreshScoreboard();
+    setInterval(refreshScoreboard, REFRESH_MS);
   </script>
 </body>
-
 </html>
